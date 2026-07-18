@@ -543,12 +543,44 @@ export const dbMutations = {
   },
 
   createVersion: async (userId: string, args: { documentId: string; title: string; content?: string; label?: string }) => {
+    let contentToSave = args.content || "";
+
+    // Check if the document is a database and serialize rows too
+    if (contentToSave) {
+      try {
+        const parsed = JSON.parse(contentToSave);
+        if (parsed && parsed.type === "database") {
+          // Fetch all current child subpages (rows) of the database
+          const { data: rows } = await supabase
+            .from("documents")
+            .select("id, title, content, icon, cover_image, order")
+            .eq("parent_document", args.documentId)
+            .eq("user_id", userId)
+            .eq("is_archived", false);
+
+          const snapshot = {
+            snapshotType: "database_with_rows",
+            parentContent: contentToSave,
+            rows: (rows || []).map((r) => ({
+              id: r.id,
+              title: r.title,
+              content: r.content,
+              icon: r.icon,
+              coverImage: r.cover_image,
+              order: r.order,
+            })),
+          };
+          contentToSave = JSON.stringify(snapshot);
+        }
+      } catch {}
+    }
+
     const { data, error } = await supabase
       .from("document_versions")
       .insert({
         document_id: args.documentId,
         title: args.title,
-        content: args.content || null,
+        content: contentToSave,
         label: args.label || null,
         created_by: userId,
       })
@@ -560,20 +592,109 @@ export const dbMutations = {
   },
 
   restoreVersion: async (userId: string, args: { documentId: string; title: string; content?: string }) => {
-    const { data, error } = await supabase
-      .from("documents")
-      .update({
-        title: args.title,
-        content: args.content || null,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", args.documentId)
-      .eq("user_id", userId)
-      .select()
-      .single();
+    // 1. Check if it's a database snapshot
+    let isDbSnapshot = false;
+    let snapshotData: any = null;
 
-    if (error) throw error;
-    return data.id;
+    if (args.content) {
+      try {
+        const parsed = JSON.parse(args.content);
+        if (parsed && parsed.snapshotType === "database_with_rows") {
+          isDbSnapshot = true;
+          snapshotData = parsed;
+        }
+      } catch {}
+    }
+
+    if (isDbSnapshot && snapshotData) {
+      // 2. Restore parent database
+      const { data: parentDoc, error: parentError } = await supabase
+        .from("documents")
+        .update({
+          title: args.title,
+          content: snapshotData.parentContent || null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", args.documentId)
+        .eq("user_id", userId)
+        .select()
+        .single();
+
+      if (parentError) throw parentError;
+
+      // 3. Get all current rows
+      const { data: currentRows } = await supabase
+        .from("documents")
+        .select("id")
+        .eq("parent_document", args.documentId)
+        .eq("user_id", userId);
+
+      const currentIds = new Set((currentRows || []).map((r) => r.id));
+      const snapshotIds = new Set(snapshotData.rows.map((r: any) => r.id));
+
+      // 4. Restore/Create rows in snapshot
+      for (const row of snapshotData.rows) {
+        if (currentIds.has(row.id)) {
+          // Update existing row
+          await supabase
+            .from("documents")
+            .update({
+              title: row.title,
+              content: row.content || null,
+              icon: row.icon || null,
+              cover_image: row.coverImage || null,
+              order: row.order !== undefined ? row.order : null,
+              is_archived: false,
+              updated_at: new Date().toISOString(),
+            })
+            .eq("id", row.id)
+            .eq("user_id", userId);
+        } else {
+          // Create deleted row back
+          await supabase
+            .from("documents")
+            .insert({
+              id: row.id,
+              title: row.title,
+              content: row.content || null,
+              icon: row.icon || null,
+              cover_image: row.coverImage || null,
+              order: row.order !== undefined ? row.order : null,
+              parent_document: args.documentId,
+              user_id: userId,
+              is_archived: false,
+            });
+        }
+      }
+
+      // 5. Archive rows that are not in the snapshot
+      const toArchive = (currentRows || []).filter((r) => !snapshotIds.has(r.id));
+      for (const row of toArchive) {
+        await supabase
+          .from("documents")
+          .update({ is_archived: true })
+          .eq("id", row.id)
+          .eq("user_id", userId);
+      }
+
+      return parentDoc.id;
+    } else {
+      // Normal page restore
+      const { data, error } = await supabase
+        .from("documents")
+        .update({
+          title: args.title,
+          content: args.content || null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", args.documentId)
+        .eq("user_id", userId)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data.id;
+    }
   }
 };
 
