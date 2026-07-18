@@ -19,7 +19,9 @@ import {
   Settings,
   TableOfContents,
   Trash,
+  History,
 } from "lucide-react";
+import { useHistorySidebar } from "@/hooks/useHistorySidebar";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useSettings } from "@/hooks/useSettingsModal";
@@ -36,6 +38,7 @@ export const Menu = ({ documentId }: MenuProps) => {
 
   const settings = useSettings();
   const words = useWordCount();
+  const historySidebar = useHistorySidebar();
 
   const document = useQuery(api.documents.getById, {
     documentId,
@@ -116,6 +119,10 @@ export const Menu = ({ documentId }: MenuProps) => {
         <DropdownMenuItem onClick={settings.onOpen}>
           <Settings className="mr-2 h-4 w-4" />
           Settings
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => historySidebar.onOpen(documentId)}>
+          <History className="mr-2 h-4 w-4" />
+          Page History
         </DropdownMenuItem>
         <DropdownMenuItem onClick={onArchive}>
           <Trash className="mr-2 h-4 w-4" />

@@ -18,6 +18,8 @@ import { SubpagesList } from "@/components/subpages-list";
 import { isDatabase } from "@/components/database/database-utils";
 import { DatabaseView } from "@/components/database/DatabaseView";
 import { TemplatesMenu } from "@/components/database/TemplatesMenu";
+import { HistorySidebar } from "@/components/modals/HistorySidebar";
+import { useRef } from "react";
 
 interface DocumentIdPageProps {
   params:
@@ -37,6 +39,8 @@ const DocumentIdPage = ({ params }: DocumentIdPageProps) => {
   const { documentId } = resolvedParams;
   const [editor, setEditor] = useState<BlockNoteEditor | null>(null);
   const { resolvedTheme } = useTheme();
+  
+  const lastSavedRef = useRef<number>(Date.now());
 
   const Editor = useMemo(
     () => dynamic(() => import("@/components/editor"), { ssr: false }),
@@ -89,11 +93,24 @@ const DocumentIdPage = ({ params }: DocumentIdPageProps) => {
   const isSmallText = doc?.smallText ?? false;
   const showToc = doc?.showToc ?? true;
 
+  const createVersion = useMutation(api.documents.createVersion);
+
   const onChange = (content: string) => {
     update({
       id: documentId,
       content,
     });
+
+    const now = Date.now();
+    if (now - lastSavedRef.current > 5 * 60 * 1000 && doc) {
+      lastSavedRef.current = now;
+      createVersion({
+        documentId,
+        title: doc.title,
+        content,
+        label: "Auto-save",
+      }).catch((err) => console.error("Failed to auto-save page history:", err));
+    }
   };
 
   if (doc === undefined || isFontLoading) {
@@ -161,6 +178,7 @@ const DocumentIdPage = ({ params }: DocumentIdPageProps) => {
         )}
         <SubpagesList documentId={documentId} />
       </div>
+      <HistorySidebar />
     </div>
   );
 };

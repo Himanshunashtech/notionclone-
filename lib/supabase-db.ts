@@ -78,6 +78,9 @@ export const api = {
     removeAll: "removeAll" as const,
     toggleFavorite: "toggleFavorite" as const,
     getFavorites: "getFavorites" as const,
+    getVersions: "getVersions" as const,
+    createVersion: "createVersion" as const,
+    restoreVersion: "restoreVersion" as const,
   },
   userSettings: {
     getUserSettings: "getUserSettings" as const,
@@ -192,6 +195,17 @@ export const dbQueries = {
 
     if (error) throw error;
     return mapUserSettings(data);
+  },
+
+  getVersions: async (userId: string, args: { documentId: string }) => {
+    const { data, error } = await supabase
+      .from("document_versions")
+      .select("*")
+      .eq("document_id", args.documentId)
+      .order("created_at", { ascending: false });
+
+    if (error) throw error;
+    return data || [];
   }
 };
 
@@ -526,6 +540,40 @@ export const dbMutations = {
         });
       if (error) throw error;
     }
+  },
+
+  createVersion: async (userId: string, args: { documentId: string; title: string; content?: string; label?: string }) => {
+    const { data, error } = await supabase
+      .from("document_versions")
+      .insert({
+        document_id: args.documentId,
+        title: args.title,
+        content: args.content || null,
+        label: args.label || null,
+        created_by: userId,
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data.id;
+  },
+
+  restoreVersion: async (userId: string, args: { documentId: string; title: string; content?: string }) => {
+    const { data, error } = await supabase
+      .from("documents")
+      .update({
+        title: args.title,
+        content: args.content || null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", args.documentId)
+      .eq("user_id", userId)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data.id;
   }
 };
 
