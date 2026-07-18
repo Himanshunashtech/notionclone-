@@ -531,6 +531,53 @@ export const TableView = ({
   preview = false,
 }: TableViewProps) => {
   const update = useMutation(api.documents.update);
+  const [calculations, setCalculations] = useState<Record<string, "sum" | "avg" | "min" | "max" | "count" | "filled" | "empty">>({});
+
+  const getColumnCalculation = (prop: DatabaseProperty) => {
+    const calcType = calculations[prop.id] || (prop.type === "number" ? "sum" : "count");
+    const values = subpages.map((p) => {
+      const row = parseDatabaseRow(p.content);
+      return row.values[prop.id] ?? "";
+    });
+
+    if (calcType === "count") {
+      return `Count: ${values.length}`;
+    }
+
+    const filledCount = values.filter((v) => v !== "").length;
+    if (calcType === "filled") {
+      return `Filled: ${filledCount}`;
+    }
+    if (calcType === "empty") {
+      return `Empty: ${values.length - filledCount}`;
+    }
+
+    if (prop.type === "number") {
+      const numbers = values.map((v) => parseFloat(v)).filter((n) => !isNaN(n));
+      if (numbers.length === 0) return "-";
+      if (calcType === "sum") {
+        const sum = numbers.reduce((a, b) => a + b, 0);
+        return `Sum: ${sum}`;
+      }
+      if (calcType === "avg") {
+        const sum = numbers.reduce((a, b) => a + b, 0);
+        return `Avg: ${(sum / numbers.length).toFixed(2)}`;
+      }
+      if (calcType === "min") {
+        return `Min: ${Math.min(...numbers)}`;
+      }
+      if (calcType === "max") {
+        return `Max: ${Math.max(...numbers)}`;
+      }
+    }
+
+    if (prop.type === "checkbox") {
+      const checked = values.filter((v) => v === "true").length;
+      return `Checked: ${checked}`;
+    }
+
+    return `Count: ${values.length}`;
+  };
 
   const handleCellChange = async (
     rowId: string,
@@ -704,6 +751,40 @@ export const TableView = ({
               </tr>
             );
           })}
+
+          {/* Calculations row (Trello & AppFlowy style) */}
+          <tr className="bg-neutral-50/40 dark:bg-neutral-900/10 border-t border-neutral-200 dark:border-neutral-800/80 font-medium text-xs text-neutral-500">
+            <td className="px-3.5 py-3 font-semibold text-neutral-400">
+              Count: {subpages.length}
+            </td>
+
+            {config.properties.map((prop) => (
+              <td key={prop.id} className="px-3.5 py-3 align-middle">
+                <DropdownMenu>
+                  <DropdownMenuTrigger className="text-[10px] font-bold text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-250 transition-colors uppercase tracking-wider px-1.5 py-0.5 rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-800 border border-transparent hover:border-neutral-200 dark:hover:border-neutral-700 select-none">
+                    {getColumnCalculation(prop)}
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent className="dark:bg-neutral-900 min-w-[140px]">
+                    <DropdownMenuLabel className="text-[9px] uppercase tracking-wider">Calculation Type</DropdownMenuLabel>
+                    <DropdownMenuItem onClick={() => setCalculations(prev => ({ ...prev, [prop.id]: "count" }))} className="text-xs cursor-pointer">Count all</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setCalculations(prev => ({ ...prev, [prop.id]: "filled" }))} className="text-xs cursor-pointer">Count filled</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setCalculations(prev => ({ ...prev, [prop.id]: "empty" }))} className="text-xs cursor-pointer">Count empty</DropdownMenuItem>
+                    {prop.type === "number" && (
+                      <>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onClick={() => setCalculations(prev => ({ ...prev, [prop.id]: "sum" }))} className="text-xs cursor-pointer">Sum</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => setCalculations(prev => ({ ...prev, [prop.id]: "avg" }))} className="text-xs cursor-pointer">Average</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => setCalculations(prev => ({ ...prev, [prop.id]: "min" }))} className="text-xs cursor-pointer">Min</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => setCalculations(prev => ({ ...prev, [prop.id]: "max" }))} className="text-xs cursor-pointer">Max</DropdownMenuItem>
+                      </>
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </td>
+            ))}
+
+            {!preview && <td className="px-3.5 py-3" />}
+          </tr>
 
           {/* Add row hint */}
           {!preview && (
