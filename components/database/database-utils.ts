@@ -8,7 +8,8 @@ export type PropertyType =
   | "checkbox"
   | "url"
   | "email"
-  | "phone";
+  | "phone"
+  | "relation";
 
 export interface DatabaseProperty {
   id: string;
@@ -18,6 +19,8 @@ export interface DatabaseProperty {
   options?: string[];
   /** For number: optional format */
   numberFormat?: "plain" | "dollar" | "euro" | "percent";
+  /** For relation: linked database page id */
+  linkedDatabaseId?: string;
 }
 
 export interface DatabaseConfig {
@@ -25,6 +28,14 @@ export interface DatabaseConfig {
   viewType: "table" | "board" | "todo" | "document" | "calendar" | "timeline" | "chart";
   properties: DatabaseProperty[];
   views?: ("table" | "board" | "todo" | "document" | "calendar" | "timeline" | "chart")[];
+}
+
+export interface DatabaseComment {
+  id: string;
+  author: string;
+  avatar: string;
+  content: string;
+  createdAt: number;
 }
 
 export interface DatabaseRowConfig {
@@ -38,6 +49,7 @@ export interface DatabaseRowConfig {
    * • url/email/phone/text: raw string
    */
   values: Record<string, string>;
+  comments?: DatabaseComment[];
 }
 
 // ─── Helpers ───────────────────────────────────────────────────────────────
@@ -56,7 +68,7 @@ export const parseDatabaseConfig = (content?: string): DatabaseConfig => {
   const fallback: DatabaseConfig = {
     type: "database",
     viewType: "table",
-    views: ["table", "board", "chart"],
+    views: ["table"],
     properties: [
       {
         id: "status",
@@ -78,7 +90,7 @@ export const parseDatabaseConfig = (content?: string): DatabaseConfig => {
     if (parsed.type === "database") {
       const config = parsed as DatabaseConfig;
       if (!config.views) {
-        config.views = ["table", "board", "chart"];
+        config.views = [config.viewType];
       }
       return config;
     }
@@ -133,4 +145,5 @@ export const PROPERTY_TYPE_META: Record<
   url:         { label: "URL",          icon: "Link" },
   email:       { label: "Email",        icon: "Mail" },
   phone:       { label: "Phone",        icon: "Phone" },
+  relation:    { label: "Relation",     icon: "ArrowUpRight" },
 };

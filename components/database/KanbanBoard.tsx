@@ -1,10 +1,11 @@
 "use client";
 
+import React, { useState } from "react";
 import { useMutation, useQuery } from "@/hooks/use-supabase-db";
 import { api } from "@/lib/supabase-db";
 import { Doc, Id } from "@/lib/supabase-db";
 import { DatabaseConfig, PropertyType, parseDatabaseRow } from "./database-utils";
-import { File, Plus, ArrowRightLeft, CalendarDays, Link as LinkIcon, Mail, Phone, Hash, Paperclip } from "lucide-react";
+import { File, Plus, ArrowRightLeft, CalendarDays, Link as LinkIcon, Mail, Phone, Hash, Paperclip, MoreHorizontal } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
 import {
@@ -278,11 +279,11 @@ const KanbanCard = ({
         )}
       </div>
 
-      {/* Extra property badges (excluding type/status which are shown as labels above) */}
-      {extraProps.filter(p => p.name.toLowerCase() !== "type" && p.name.toLowerCase() !== "status").length > 0 && (
+      {/* Extra property badges (excluding type/status which are shown as labels above, and relation properties to hide raw IDs) */}
+      {extraProps.filter(p => p.name.toLowerCase() !== "type" && p.name.toLowerCase() !== "status" && p.type !== "relation").length > 0 && (
         <div className="flex flex-wrap gap-1.5 pt-0.5">
           {extraProps
-            .filter(p => p.name.toLowerCase() !== "type" && p.name.toLowerCase() !== "status")
+            .filter(p => p.name.toLowerCase() !== "type" && p.name.toLowerCase() !== "status" && p.type !== "relation")
             .map((p) => {
               const val = rowData.values[p.id];
               if (!val) return null;
@@ -317,6 +318,62 @@ export const KanbanBoard = ({
   preview = false,
 }: KanbanBoardProps) => {
   const update = useMutation(api.documents.update);
+  const [columnColors, setColumnColors] = useState<Record<string, string>>(() => {
+    try {
+      const stored = localStorage.getItem(`kanban-colors-${_documentId}`);
+      return stored ? JSON.parse(stored) : {};
+    } catch {
+      return {};
+    }
+  });
+
+  const setColumnColor = (colName: string, theme: string) => {
+    setColumnColors(prev => {
+      const updated = { ...prev, [colName]: theme };
+      try {
+        localStorage.setItem(`kanban-colors-${_documentId}`, JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
+  };
+
+  const LIST_THEMES: Record<string, { bg: string; text: string; dot: string }> = {
+    default: {
+      bg: "bg-neutral-50 dark:bg-neutral-900/50",
+      text: "text-neutral-700 dark:text-neutral-300",
+      dot: "bg-neutral-400",
+    },
+    blue: {
+      bg: "bg-blue-50/60 dark:bg-blue-950/20",
+      text: "text-blue-700 dark:text-blue-400",
+      dot: "bg-blue-500",
+    },
+    green: {
+      bg: "bg-emerald-50/60 dark:bg-emerald-950/20",
+      text: "text-emerald-700 dark:text-emerald-400",
+      dot: "bg-emerald-500",
+    },
+    orange: {
+      bg: "bg-amber-50/60 dark:bg-amber-950/20",
+      text: "text-amber-700 dark:text-amber-400",
+      dot: "bg-amber-500",
+    },
+    red: {
+      bg: "bg-rose-50/60 dark:bg-rose-950/20",
+      text: "text-rose-700 dark:text-rose-400",
+      dot: "bg-rose-500",
+    },
+    purple: {
+      bg: "bg-purple-50/60 dark:bg-purple-950/20",
+      text: "text-purple-700 dark:text-purple-400",
+      dot: "bg-purple-500",
+    },
+    pink: {
+      bg: "bg-pink-50/60 dark:bg-pink-950/20",
+      text: "text-pink-700 dark:text-pink-400",
+      dot: "bg-pink-500",
+    },
+  };
 
   // Group by the first select property (usually Status)
   const groupProp = config.properties.find((p) => p.type === "select") || {
@@ -373,22 +430,49 @@ export const KanbanBoard = ({
           return val.toLowerCase() === colName.toLowerCase();
         });
 
-        const { dot, bg, text } = getColStyle(colName);
+        const selectedTheme = columnColors[colName] || "default";
+        const themeStyles = LIST_THEMES[selectedTheme] || LIST_THEMES.default;
+        const { dot, bg, text } = selectedTheme === "default" ? getColStyle(colName) : themeStyles;
 
         return (
           <div
             key={colName}
             onDragOver={(e) => e.preventDefault()}
             onDrop={(e) => handleDrop(e, colName)}
-            className={`flex flex-col ${bg} p-3.5 rounded-xl border border-neutral-200 dark:border-neutral-800 min-w-[260px] flex-shrink-0`}
+            className={`flex flex-col ${bg} p-3.5 rounded-xl border border-neutral-200 dark:border-neutral-800 min-w-[260px] flex-shrink-0 transition-colors duration-200`}
           >
             {/* Column header */}
-            <div className="flex items-center gap-x-2 mb-3 px-0.5">
-              <span className={`h-2.5 w-2.5 rounded-full ${dot}`} />
-              <span className={`text-sm font-semibold ${text}`}>{colName}</span>
-              <span className="text-xs font-bold text-neutral-400 dark:text-neutral-500">
-                {columnCards.length}
-              </span>
+            <div className="flex items-center justify-between mb-3 px-0.5 group/header w-full">
+              <div className="flex items-center gap-x-2 min-w-0">
+                <span className={`h-2.5 w-2.5 rounded-full ${dot} shrink-0`} />
+                <span className={`text-sm font-semibold truncate ${text}`}>{colName}</span>
+                <span className="text-xs font-bold text-neutral-400 dark:text-neutral-500 shrink-0">
+                  {columnCards.length}
+                </span>
+              </div>
+
+              {!preview && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger className="opacity-0 group-hover/header:opacity-100 hover:bg-neutral-100 dark:hover:bg-neutral-850 p-1 rounded transition text-neutral-400 shrink-0 outline-none">
+                    <MoreHorizontal className="h-3.5 w-3.5" />
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="dark:bg-neutral-900 w-36">
+                    <div className="px-2 py-1 text-[10px] font-semibold text-neutral-500 uppercase tracking-wider">
+                      List Color
+                    </div>
+                    {Object.keys(LIST_THEMES).map((themeName) => (
+                      <DropdownMenuItem
+                        key={themeName}
+                        onClick={() => setColumnColor(colName, themeName)}
+                        className="text-xs cursor-pointer flex items-center gap-x-2 capitalize"
+                      >
+                        <span className={`h-2 w-2 rounded-full ${LIST_THEMES[themeName].dot}`} />
+                        {themeName}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
             </div>
 
             {/* Cards */}

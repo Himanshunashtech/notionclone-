@@ -10,6 +10,8 @@ import LandingPage from "@/app/(landing)/page";
 import DocumentsPage from "@/app/(main)/(routes)/documents/page";
 import DocumentIdPage from "@/app/(main)/(routes)/documents/[documentId]/page";
 import PreviewPage from "@/app/(public)/(routes)/preview/[documentId]/page";
+import LibraryPage from "@/app/(main)/(routes)/library/page";
+import CalendarPage from "@/app/(main)/(routes)/calendar/page";
 import OverviewPage from "@/app/(landing)/(routes)/overview/page";
 import PricingPage from "@/app/(landing)/(routes)/pricing/page";
 import IntegrationsPage from "@/app/(landing)/(routes)/integrations/page";
@@ -183,12 +185,27 @@ export default function App() {
             }
           />
 
-          {/* Main layout protected routes */}
           <Route
             path="/documents"
             element={
               <MainLayout>
                 <DocumentsPage />
+              </MainLayout>
+            }
+          />
+          <Route
+            path="/library"
+            element={
+              <MainLayout>
+                <LibraryPage />
+              </MainLayout>
+            }
+          />
+          <Route
+            path="/calendar"
+            element={
+              <MainLayout>
+                <CalendarPage />
               </MainLayout>
             }
           />

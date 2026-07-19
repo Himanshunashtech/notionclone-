@@ -29,6 +29,21 @@ export interface UserSettingsRow {
   focusMode: boolean;
 }
 
+export interface CalendarEventRow {
+  _id: string;
+  _creationTime: number;
+  id: string;
+  title: string;
+  description?: string;
+  userId: string;
+  startTime: number;
+  endTime: number;
+  isAllDay: boolean;
+  color?: string;
+  meetingLink?: string;
+  documentId?: string;
+}
+
 // Map database row to app model (mapping id -> _id, etc.)
 const mapDocument = (row: any): DocumentRow => {
   if (!row) return row;
@@ -61,6 +76,21 @@ const mapUserSettings = (row: any): UserSettingsRow => {
   };
 };
 
+const mapCalendarEvent = (row: any): CalendarEventRow => {
+  if (!row) return row;
+  return {
+    ...row,
+    _id: row.id,
+    _creationTime: row.created_at ? new Date(row.created_at).getTime() : Date.now(),
+    userId: row.user_id,
+    startTime: new Date(row.start_time).getTime(),
+    endTime: new Date(row.end_time).getTime(),
+    isAllDay: row.is_all_day,
+    meetingLink: row.meeting_link || undefined,
+    documentId: row.document_id || undefined,
+  };
+};
+
 export const api = {
   documents: {
     getSidebar: "getSidebar" as const,
@@ -85,6 +115,16 @@ export const api = {
   userSettings: {
     getUserSettings: "getUserSettings" as const,
     updateUserSettings: "updateUserSettings" as const,
+  },
+  calendar: {
+    getEvents: "getEvents" as const,
+    createEvent: "createEvent" as const,
+    updateEvent: "updateEvent" as const,
+    deleteEvent: "deleteEvent" as const,
+  },
+  activities: {
+    getActivities: "getActivities" as const,
+    createActivity: "createActivity" as const,
   }
 } as const;
 
@@ -206,6 +246,34 @@ export const dbQueries = {
 
     if (error) throw error;
     return data || [];
+  },
+
+  getActivities: async (userId: string, args: { documentId: string }) => {
+    const { data, error } = await supabase
+      .from("page_activities")
+      .select("*")
+      .eq("document_id", args.documentId)
+      .order("created_at", { ascending: false });
+
+    if (error) throw error;
+    return (data || []).map((row: any) => ({
+      ...row,
+      _id: row.id,
+      _creationTime: row.created_at ? new Date(row.created_at).getTime() : Date.now(),
+      documentId: row.document_id,
+      userId: row.user_id,
+    }));
+  },
+
+  getEvents: async (userId: string) => {
+    const { data, error } = await supabase
+      .from("calendar_events")
+      .select("*")
+      .eq("user_id", userId)
+      .order("start_time", { ascending: true });
+
+    if (error) throw error;
+    return (data || []).map(mapCalendarEvent);
   }
 };
 
@@ -695,6 +763,113 @@ export const dbMutations = {
       if (error) throw error;
       return data.id;
     }
+  },
+
+  createEvent: async (userId: string, args: {
+    title: string;
+    description?: string;
+    startTime: string;
+    endTime: string;
+    isAllDay?: boolean;
+    color?: string;
+    meetingLink?: string;
+    documentId?: string;
+  }) => {
+    const { data, error } = await supabase
+      .from("calendar_events")
+      .insert({
+        title: args.title,
+        description: args.description || null,
+        user_id: userId,
+        start_time: args.startTime,
+        end_time: args.endTime,
+        is_all_day: args.isAllDay || false,
+        color: args.color || null,
+        meeting_link: args.meetingLink || null,
+        document_id: args.documentId || null,
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+    return mapCalendarEvent(data);
+  },
+
+  updateEvent: async (userId: string, args: {
+    id: string;
+    title?: string;
+    description?: string;
+    startTime?: string;
+    endTime?: string;
+    isAllDay?: boolean;
+    color?: string;
+    meetingLink?: string;
+    documentId?: string;
+  }) => {
+    const updateData: Record<string, any> = {};
+    if (args.title !== undefined) updateData.title = args.title;
+    if (args.description !== undefined) updateData.description = args.description || null;
+    if (args.startTime !== undefined) updateData.start_time = args.startTime;
+    if (args.endTime !== undefined) updateData.end_time = args.endTime;
+    if (args.isAllDay !== undefined) updateData.is_all_day = args.isAllDay;
+    if (args.color !== undefined) updateData.color = args.color || null;
+    if (args.meetingLink !== undefined) updateData.meeting_link = args.meetingLink || null;
+    if (args.documentId !== undefined) updateData.document_id = args.documentId || null;
+    updateData.updated_at = new Date().toISOString();
+
+    const { data, error } = await supabase
+      .from("calendar_events")
+      .update(updateData)
+      .eq("id", args.id)
+      .eq("user_id", userId)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return mapCalendarEvent(data);
+  },
+
+  createActivity: async (userId: string, args: {
+    documentId: string;
+    action: string;
+    target: string;
+    context?: string;
+    icon?: string;
+  }) => {
+    const { data, error } = await supabase
+      .from("page_activities")
+      .insert({
+        document_id: args.documentId,
+        user_id: userId,
+        action: args.action,
+        target: args.target,
+        context: args.context || null,
+        icon: args.icon || null,
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+    return {
+      ...data,
+      _id: data.id,
+      _creationTime: data.created_at ? new Date(data.created_at).getTime() : Date.now(),
+      documentId: data.document_id,
+      userId: data.user_id,
+    };
+  },
+
+  deleteEvent: async (userId: string, args: { id: string }) => {
+    const { data, error } = await supabase
+      .from("calendar_events")
+      .delete()
+      .eq("id", args.id)
+      .eq("user_id", userId)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data.id;
   }
 };
 

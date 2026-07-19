@@ -50,6 +50,7 @@ interface DocumentListProps {
   level?: number;
   data?: Doc<"documents">[];
   navDrawer?: boolean;
+  excludeIds?: string[];
 }
 
 const SortableItem = ({
@@ -112,6 +113,7 @@ export const DocumentList = ({
   parentDocumentId,
   level = 0,
   navDrawer,
+  excludeIds,
 }: DocumentListProps) => {
   const params = useParams();
   const router = useRouter();
@@ -161,14 +163,44 @@ export const DocumentList = ({
     }
   }, [activeDocument]);
 
+  const TEAMSPACE_TITLES = ["Projects", "Meetings", "Docs", "Tasks", "Brainstorming Session", "Goals"];
+  const [localTeamspaceIds, setLocalTeamspaceIds] = useState<string[]>([]);
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem("teamspaceIds");
+      if (stored) {
+        setLocalTeamspaceIds(JSON.parse(stored));
+      }
+    } catch {}
+  }, []);
+
+  // Prefer prop-provided excludeIds, fall back to locally read teamspaceIds
+  const effectiveExcludeIds = excludeIds ?? localTeamspaceIds;
+
   useEffect(() => {
     if (isDragging) {
       return;
     }
     if (documents) {
-      setOrderedDocuments(documents);
+      if (!parentDocumentId) {
+        setOrderedDocuments(documents.filter((d) => !TEAMSPACE_TITLES.includes(d.title) && !effectiveExcludeIds.includes(d._id)));
+      } else if (effectiveExcludeIds.includes(parentDocumentId)) {
+        const order = ["Projects", "Meetings", "Docs", "Tasks", "Brainstorming Session", "Goals"];
+        const sorted = [...documents].sort((a, b) => {
+          const idxA = order.indexOf(a.title);
+          const idxB = order.indexOf(b.title);
+          if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+          if (idxA !== -1) return -1;
+          if (idxB !== -1) return 1;
+          return a.title.localeCompare(b.title);
+        });
+        setOrderedDocuments(sorted);
+      } else {
+        setOrderedDocuments(documents);
+      }
     }
-  }, [documents]);
+  }, [documents, parentDocumentId, isDragging, effectiveExcludeIds]);
 
   const onExpand = (documentId: string) => {
     setExpanded((prevExpanded) => {

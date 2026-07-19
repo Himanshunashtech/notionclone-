@@ -1,8 +1,9 @@
 "use client";
 
-import { useMutation } from "@/hooks/use-supabase-db";
+import { useMutation, useQuery } from "@/hooks/use-supabase-db";
 import { api } from "@/lib/supabase-db";
 import { Doc, Id } from "@/lib/supabase-db";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   DatabaseConfig,
   DatabaseProperty,
@@ -28,6 +29,7 @@ import {
   Phone,
   ChevronDown,
   X,
+  ArrowUpRight,
 } from "lucide-react";
 import { useState, useRef } from "react";
 import {
@@ -45,6 +47,7 @@ interface TableViewProps {
   config: DatabaseConfig;
   subpages: Doc<"documents">[];
   preview?: boolean;
+  onAddRow?: () => void;
 }
 
 // ─── Color helpers ──────────────────────────────────────────────────────────
@@ -131,6 +134,7 @@ const TYPE_ICONS: Record<PropertyType, React.ReactNode> = {
   url:         <LinkIcon className="h-3 w-3" />,
   email:       <Mail className="h-3 w-3" />,
   phone:       <Phone className="h-3 w-3" />,
+  relation:    <ArrowUpRight className="h-3.5 w-3.5" />,
 };
 
 // ─── Number formatting ──────────────────────────────────────────────────────
@@ -293,9 +297,24 @@ function NumberCell({ prop, value, preview, onChange }: CellProps) {
 }
 
 function DateCell({ prop: _prop, value, preview, onChange }: CellProps) {
-  const formatted = value
-    ? new Date(value).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })
-    : "";
+  const formatted = (() => {
+    if (!value) return "";
+    if (value.includes("/")) {
+      const [start, end] = value.split("/");
+      try {
+        const fmtStart = new Date(start).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+        const fmtEnd = new Date(end).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+        return `${fmtStart} ➔ ${fmtEnd}`;
+      } catch {
+        return value;
+      }
+    }
+    try {
+      return new Date(value).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+    } catch {
+      return value;
+    }
+  })();
 
   if (preview) {
     return (
@@ -308,7 +327,7 @@ function DateCell({ prop: _prop, value, preview, onChange }: CellProps) {
   return (
     <div className="relative group/date">
       <input
-        type="date"
+        type={value.includes("/") ? "text" : "date"}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         className="bg-transparent w-full text-xs text-neutral-700 dark:text-neutral-300 border-none outline-hidden px-1.5 py-1 cursor-pointer rounded-md hover:bg-neutral-50 dark:hover:bg-neutral-800 transition"
@@ -435,6 +454,200 @@ function TextCell({ prop: _prop, value, preview, onChange }: CellProps) {
   );
 }
 
+function RelationCell({ prop, value, preview, onChange }: CellProps) {
+  const selectedIds = value ? value.split(",").filter(Boolean) : [];
+
+  // Query linked pages
+  const linkedPages = useQuery(
+    api.documents.getSidebar,
+    prop.linkedDatabaseId ? { parentDocument: prop.linkedDatabaseId } : "skip"
+  );
+
+  // If no database id or skipped, render simple text
+  if (!prop.linkedDatabaseId) {
+    return <span className="text-xs text-muted-foreground">No linked DB</span>;
+  }
+
+  const selectedPages = (linkedPages || []).filter((p: any) => selectedIds.includes(p._id));
+  const availablePages = (linkedPages || []).filter((p: any) => !selectedIds.includes(p._id));
+
+  const togglePage = (id: string) => {
+    const updated = selectedIds.includes(id)
+      ? selectedIds.filter((x) => x !== id)
+      : [...selectedIds, id];
+    onChange(updated.join(","));
+  };
+
+  const [search, setSearch] = useState("");
+
+  const filteredAvailable = availablePages.filter((p: any) =>
+    (p.title || "").toLowerCase().includes(search.toLowerCase())
+  );
+
+  // Query target database to get its properties configuration
+  const targetDatabase = useQuery(
+    api.documents.getById,
+    prop.linkedDatabaseId ? { documentId: prop.linkedDatabaseId as Id<"documents"> } : "skip"
+  );
+
+  const createNote = useMutation(api.documents.create);
+  const updateNote = useMutation(api.documents.update);
+
+  const handleCreateNew = async () => {
+    if (!search.trim() || !prop.linkedDatabaseId) return;
+
+    const title = search.trim();
+    setSearch("");
+
+    try {
+      const defaultValues: Record<string, string> = {};
+      if (targetDatabase?.content) {
+        try {
+          const config = JSON.parse(targetDatabase.content);
+          if (config.type === "database" && Array.isArray(config.properties)) {
+            config.properties.forEach((p: any) => {
+              defaultValues[p.id] = defaultValueForType(p);
+            });
+          }
+        } catch (e) {
+          console.error(e);
+        }
+      }
+
+      const initialRowContent = JSON.stringify(
+        { type: "database_row", values: defaultValues },
+        null,
+        2
+      );
+
+      const newId = await createNote({
+        title,
+        parentDocument: prop.linkedDatabaseId,
+      });
+
+      await updateNote({
+        id: newId,
+        content: initialRowContent,
+      });
+
+      const updated = [...selectedIds, newId];
+      onChange(updated.join(","));
+
+      toast.success(`Created and linked "${title}"`);
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to create and link page");
+    }
+  };
+
+  if (preview) {
+    return (
+      <div className="flex flex-wrap gap-1">
+        {selectedPages.length === 0 ? (
+          <span className="text-xs text-neutral-300 dark:text-neutral-600">—</span>
+        ) : (
+          selectedPages.map((page: any) => (
+            <span key={page._id} className="inline-flex items-center gap-x-1 px-1.5 py-0.5 rounded-md bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-350 text-[10px] font-medium border border-neutral-200/50 dark:border-neutral-750">
+              {page.icon ? <span>{page.icon}</span> : <File className="h-2.5 w-2.5 text-neutral-400" />}
+              <span>{page.title || "Untitled"}</span>
+            </span>
+          ))
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <Popover>
+      <PopoverTrigger className="w-full text-left truncate flex flex-wrap gap-1 px-1.5 py-1 min-h-[28px] rounded-md hover:bg-neutral-50 dark:hover:bg-neutral-850 cursor-pointer">
+        {selectedPages.length === 0 ? (
+          <span className="text-xs text-neutral-300 dark:text-neutral-600">—</span>
+        ) : (
+          selectedPages.map((page: any) => (
+            <span key={page._id} className="inline-flex items-center gap-x-1 px-1.5 py-0.5 rounded-md bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-350 text-[10px] font-medium border border-neutral-200/50 dark:border-neutral-750 select-none">
+              {page.icon ? <span>{page.icon}</span> : <File className="h-2.5 w-2.5 text-neutral-400" />}
+              <span>{page.title || "Untitled"}</span>
+            </span>
+          ))
+        )}
+      </PopoverTrigger>
+      <PopoverContent className="w-72 p-0 dark:bg-neutral-905" align="start">
+        {/* Header Search */}
+        <div className="p-2 border-b border-neutral-200 dark:border-neutral-800">
+          <input
+            placeholder={`Link or create a page...`}
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full h-7 px-2 text-xs bg-neutral-50 dark:bg-neutral-850 border border-neutral-200 dark:border-neutral-750 rounded-md outline-hidden focus:ring-1 focus:ring-blue-500"
+          />
+        </div>
+
+        {/* Selected List */}
+        {selectedPages.length > 0 && (
+          <div className="p-1 border-b border-neutral-200 dark:border-neutral-800">
+            <div className="px-2 py-1 text-[9px] font-bold text-muted-foreground uppercase tracking-wider">
+              {selectedPages.length} Selected
+            </div>
+            {selectedPages.map((page: any) => (
+              <div
+                key={page._id}
+                className="flex items-center justify-between px-2 py-1 hover:bg-neutral-50 dark:hover:bg-neutral-850 rounded-md text-xs group"
+              >
+                <div className="flex items-center gap-x-1.5 truncate">
+                  {page.icon ? <span>{page.icon}</span> : <File className="h-3 w-3 text-neutral-400" />}
+                  <span className="truncate">{page.title || "Untitled"}</span>
+                </div>
+                <button
+                  onClick={() => togglePage(page._id)}
+                  className="text-neutral-400 hover:text-rose-500 p-0.5 rounded transition"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Available list */}
+        <div className="max-h-[180px] overflow-y-auto p-1">
+          <div className="px-2 py-1 text-[9px] font-bold text-muted-foreground uppercase tracking-wider">
+            Select More
+          </div>
+          {filteredAvailable.length === 0 ? (
+            <div className="px-2 py-3 text-center text-xs text-muted-foreground">
+              No matching pages
+            </div>
+          ) : (
+            filteredAvailable.map((page: any) => (
+              <div
+                key={page._id}
+                onClick={() => togglePage(page._id)}
+                className="flex items-center gap-x-1.5 px-2 py-1.5 hover:bg-neutral-50 dark:hover:bg-neutral-850 rounded-md text-xs cursor-pointer select-none"
+              >
+                {page.icon ? <span>{page.icon}</span> : <File className="h-3 w-3 text-neutral-400" />}
+                <span className="truncate">{page.title || "Untitled"}</span>
+              </div>
+            ))
+          )}
+        </div>
+
+        {/* Create new option */}
+        {search.trim() && (
+          <div className="p-1 border-t border-neutral-200 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-850/50">
+            <button
+              onClick={handleCreateNew}
+              className="w-full flex items-center gap-x-1.5 px-2 py-1.5 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-md text-xs text-blue-500 font-medium cursor-pointer text-left"
+            >
+              <Plus className="h-3.5 w-3.5 shrink-0" />
+              <span className="truncate">Create "{search.trim()}"</span>
+            </button>
+          </div>
+        )}
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 // Master cell router
 function CellRenderer(props: CellProps) {
   switch (props.prop.type) {
@@ -446,6 +659,7 @@ function CellRenderer(props: CellProps) {
     case "url":         return <UrlCell {...props} />;
     case "email":       return <EmailCell {...props} />;
     case "phone":       return <PhoneCell {...props} />;
+    case "relation":    return <RelationCell {...props} />;
     default:            return <TextCell {...props} />;
   }
 }
@@ -529,6 +743,7 @@ export const TableView = ({
   config,
   subpages,
   preview = false,
+  onAddRow,
 }: TableViewProps) => {
   const update = useMutation(api.documents.update);
   const [calculations, setCalculations] = useState<Record<string, "sum" | "avg" | "min" | "max" | "count" | "filled" | "empty">>({});
@@ -793,7 +1008,10 @@ export const TableView = ({
                 colSpan={config.properties.length + 2}
                 className="px-3 py-2"
               >
-                <button className="flex items-center gap-x-1.5 text-xs text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300 transition">
+                <button
+                  onClick={onAddRow}
+                  className="flex items-center gap-x-1.5 text-xs text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300 transition"
+                >
                   <Plus className="h-3.5 w-3.5" />
                   <span>New row</span>
                 </button>

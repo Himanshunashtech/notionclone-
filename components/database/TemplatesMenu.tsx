@@ -163,6 +163,15 @@ interface TemplateCard {
 const TEMPLATES: TemplateCard[] = [
   // ── General ──────────────────────────────────────────────────────────────
   {
+    label: "Simple Note",
+    desc: "A clean blank document for standard notes",
+    icon: <FileText className="h-6 w-6" />,
+    color: "sky",
+    type: "document",
+    content: "",
+    category: "general",
+  },
+  {
     label: "Database Table",
     desc: "Track anything in a structured table",
     icon: <Table className="h-6 w-6" />,

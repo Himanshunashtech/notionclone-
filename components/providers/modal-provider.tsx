@@ -7,6 +7,8 @@ import { CoverImageModal } from "@/components/modals/CoverImageModal";
 import { AuthModal } from "@/components/modals/AuthModal";
 import { AccountModal } from "@/components/modals/AccountModal";
 import { FilePreviewModal } from "@/components/modals/FilePreviewModal";
+import { TemplatesModal } from "@/components/modals/TemplatesModal";
+import { OnboardingModal } from "@/components/modals/OnboardingModal";
 
 export const ModalProvider = () => {
   const [isMounted, setIsMounted] = useState(false);
@@ -26,6 +28,8 @@ export const ModalProvider = () => {
       <AuthModal />
       <AccountModal />
       <FilePreviewModal />
+      <TemplatesModal />
+      <OnboardingModal />
     </>
   );
 };

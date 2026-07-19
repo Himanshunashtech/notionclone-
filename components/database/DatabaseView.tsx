@@ -591,6 +591,7 @@ export const DatabaseView = ({
             config={config}
             subpages={processedSubpages}
             preview={preview}
+            onAddRow={handleAddRow}
           />
         )}
         {activeTab === "board" && (

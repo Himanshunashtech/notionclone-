@@ -3,13 +3,14 @@
 import { useEffect } from "react";
 import { Spinner } from "@/components/spinner";
 import { useConvexAuth } from "@/components/providers/supabase-provider";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import Navigation from "./_components/Navigation";
 import { SearchCommand } from "@/components/search-command";
 
 const MainLayout = ({ children }: { children: React.ReactNode }) => {
   const { isAuthenticated, isLoading } = useConvexAuth();
   const router = useRouter();
+  const pathname = usePathname();
 
   useEffect(() => {
     import("@/components/editor");
@@ -29,9 +30,11 @@ const MainLayout = ({ children }: { children: React.ReactNode }) => {
     );
   }
 
+  const isCalendar = pathname === "/calendar";
+
   return (
     <div className="dark:bg-dark flex h-full">
-      <Navigation />
+      {!isCalendar && <Navigation />}
       <main className="h-full flex-1 overflow-y-auto">
         <SearchCommand />
         {children}

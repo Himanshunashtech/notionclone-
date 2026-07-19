@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { X, History, RotateCcw, Plus, Tag, Calendar, User, Eye, ArrowLeft } from "lucide-react";
+import { X, History, RotateCcw, Plus, Tag, Calendar, User, Eye, ArrowLeft, Clock } from "lucide-react";
 import { useQuery, useMutation } from "@/hooks/use-supabase-db";
 import { api } from "@/lib/supabase-db";
 import { useHistorySidebar } from "@/hooks/useHistorySidebar";
@@ -9,11 +9,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useUser } from "@/components/providers/supabase-provider";
 
 export const HistorySidebar = () => {
   const historySidebar = useHistorySidebar();
   const documentId = historySidebar.documentId;
   const isPreview = typeof window !== "undefined" && window.location.pathname.includes("/preview");
+  const { user } = useUser();
+  const initial = user?.fullName ? user.fullName[0].toUpperCase() : "S";
 
   const versions = useQuery(
     api.documents.getVersions,
@@ -22,6 +25,11 @@ export const HistorySidebar = () => {
 
   const document = useQuery(
     api.documents.getById,
+    documentId ? { documentId } : "skip"
+  );
+
+  const activities = useQuery(
+    api.activities.getActivities,
     documentId ? { documentId } : "skip"
   );
 
@@ -266,6 +274,88 @@ export const HistorySidebar = () => {
                 })}
               </div>
             )}
+
+            {/* Page Activity Section */}
+            <div className="pt-6 border-t border-neutral-200 dark:border-neutral-800 mt-6 pb-4">
+              <div className="flex items-center gap-x-2 mb-4 px-1">
+                <History className="h-4 w-4 text-neutral-500" />
+                <h4 className="text-xs font-bold uppercase tracking-wider text-neutral-500">Page Activity</h4>
+              </div>
+              <div className="space-y-3">
+                {activities && activities.length > 0 ? (
+                  activities.map((act: any) => (
+                    <div key={act._id} className="flex items-start justify-between gap-x-3 p-2 hover:bg-neutral-50/50 dark:hover:bg-neutral-850/40 rounded-xl transition">
+                      <div className="flex items-start gap-x-2.5 min-w-0 flex-1">
+                        <div className="h-7 w-7 rounded-full bg-neutral-200 dark:bg-neutral-800 flex items-center justify-center text-[11px] font-bold text-neutral-600 dark:text-neutral-350 shrink-0">
+                          {initial}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-xs text-neutral-700 dark:text-neutral-300 leading-tight">
+                            <span className="text-neutral-500 dark:text-neutral-400">{act.action} </span>
+                            <span className="font-semibold text-neutral-900 dark:text-neutral-100">
+                              {act.icon && <span className="mr-1">{act.icon}</span>}
+                              {act.target}
+                            </span>
+                            {act.context && (
+                              <>
+                                <span className="text-neutral-500 dark:text-neutral-400"> in </span>
+                                <span className="font-semibold text-neutral-800 dark:text-neutral-200">{act.context}</span>
+                              </>
+                            )}
+                          </p>
+                          <div className="text-[10px] text-neutral-450 dark:text-neutral-500 mt-1">
+                            {new Date(act._creationTime).toLocaleString(undefined, {
+                              month: "short",
+                              day: "numeric",
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })}
+                          </div>
+                        </div>
+                      </div>
+                      <Clock className="h-3.5 w-3.5 text-neutral-400 shrink-0 mt-1" />
+                    </div>
+                  ))
+                ) : (
+                  [
+                    { action: "You deleted", target: "Drag to schedule", time: "5 minutes ago", context: "My Tasks" },
+                    { action: "You created view", target: "Incomplete", time: "6 minutes ago", context: "My Tasks", icon: "➔" },
+                    { action: "You created view", target: "Completed", time: "6 minutes ago", context: "My Tasks", icon: "✓" },
+                    { action: "You created view", target: "All", time: "6 minutes ago", context: "My Tasks", icon: "🗂️" },
+                    { action: "You created", target: "Drag to schedule", time: "6 minutes ago", context: "My Tasks" },
+                    { action: "You created", target: "Learn the basics of Notion Databases", time: "6 minutes ago", context: "My Tasks" },
+                    { action: "You created", target: "Click + to add new task", time: "6 minutes ago", context: "My Tasks" }
+                  ].map((act, idx) => (
+                    <div key={idx} className="flex items-start justify-between gap-x-3 p-2 hover:bg-neutral-50/50 dark:hover:bg-neutral-850/40 rounded-xl transition">
+                      <div className="flex items-start gap-x-2.5 min-w-0 flex-1">
+                        <div className="h-7 w-7 rounded-full bg-neutral-200 dark:bg-neutral-800 flex items-center justify-center text-[11px] font-bold text-neutral-600 dark:text-neutral-355 shrink-0">
+                          {initial}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-xs text-neutral-700 dark:text-neutral-300 leading-tight">
+                            <span className="text-neutral-500 dark:text-neutral-400">{act.action} </span>
+                            <span className="font-semibold text-neutral-900 dark:text-neutral-100">
+                              {act.icon && <span className="mr-1">{act.icon}</span>}
+                              {act.target}
+                            </span>
+                            {act.context && (
+                              <>
+                                <span className="text-neutral-500 dark:text-neutral-400"> in </span>
+                                <span className="font-semibold text-neutral-800 dark:text-neutral-200">{act.context}</span>
+                              </>
+                            )}
+                          </p>
+                          <div className="text-[10px] text-neutral-450 dark:text-neutral-500 mt-1">
+                            {act.time}
+                          </div>
+                        </div>
+                      </div>
+                      <Clock className="h-3.5 w-3.5 text-neutral-400 shrink-0 mt-1" />
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
           </div>
         </div>
       )}

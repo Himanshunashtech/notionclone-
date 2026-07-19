@@ -51,7 +51,7 @@ export const ScrollableList = ({
   };
 
   return (
-    <div className="relative h-full">
+    <div className="relative flex-1 min-h-0 flex flex-col">
       <div
         className={cn(
           "from-secondary absolute top-0 right-0 left-0 z-10 mr-1 flex h-6 items-center justify-center bg-linear-to-b to-transparent transition-opacity duration-300",
@@ -70,7 +70,7 @@ export const ScrollableList = ({
         ref={scrollRef}
         onScroll={checkForScroll}
         className={cn(
-          "max-h-[calc(100vh-224px)] overflow-y-auto",
+          "flex-1 min-h-0 overflow-y-auto",
           "no-scrollbar",
           className,
         )}

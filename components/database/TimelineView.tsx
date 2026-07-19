@@ -3,8 +3,14 @@
 import React, { useState, useRef, useEffect } from "react";
 import { Doc } from "@/lib/supabase-db";
 import { DatabaseConfig, parseDatabaseRow } from "./database-utils";
-import { Calendar, ChevronLeft, ChevronRight, File } from "lucide-react";
+import { Calendar, ChevronLeft, ChevronRight, File, ArrowRight } from "lucide-react";
 import Link from "next/link";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface TimelineViewProps {
   documentId: string;
@@ -23,10 +29,30 @@ export const TimelineView = ({
   const [scale, setScale] = useState<"day" | "week">("day");
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
+  // List all available date properties in this database schema
+  const dateProperties = config.properties.filter((p) => p.type === "date");
+
+  // Determine defaults for Start and End Date columns
+  const [startDatePropId, setStartDatePropId] = useState<string>(() => {
+    const found = config.properties.find(
+      (p) => p.type === "date" && p.name.toLowerCase().includes("start")
+    );
+    return found?.id || config.properties.find((p) => p.type === "date")?.id || "";
+  });
+
+  const [endDatePropId, setEndDatePropId] = useState<string>(() => {
+    const found = config.properties.find(
+      (p) => p.type === "date" && p.name.toLowerCase().includes("end")
+    );
+    if (found) return found.id;
+    const dates = config.properties.filter((p) => p.type === "date");
+    return dates.length > 1 ? dates[1].id : "";
+  });
+
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
 
-  // Generate 30 days starting from 15 days ago for scroll centering
+  // Generate 30 days starting from 10 days ago for scroll centering
   const days: Date[] = [];
   const baseDate = new Date(year, month, currentDate.getDate() - 10);
   for (let i = 0; i < 30; i++) {
@@ -70,13 +96,64 @@ export const TimelineView = ({
     <div className="border border-neutral-200 dark:border-neutral-800 rounded-xl overflow-hidden bg-white dark:bg-neutral-900 shadow-xs flex flex-col">
       
       {/* Header controls */}
-      <div className="flex items-center justify-between p-4 border-b border-neutral-200 dark:border-neutral-800 bg-neutral-50/20 dark:bg-neutral-900/10">
-        <div className="flex items-center gap-x-2">
+      <div className="flex flex-wrap items-center justify-between gap-4 p-4 border-b border-neutral-200 dark:border-neutral-800 bg-neutral-50/20 dark:bg-neutral-900/10">
+        <div className="flex items-center gap-x-2.5">
           <Calendar className="h-4 w-4 text-neutral-500" />
           <h3 className="font-bold text-sm">
             Timeline — {monthNames[month]} {year}
           </h3>
         </div>
+
+        {/* Date Column Selectors */}
+        {dateProperties.length > 0 && (
+          <div className="flex items-center gap-x-2 text-xs text-muted-foreground select-none">
+            <span>Map Range:</span>
+            {/* Start Date Dropdown */}
+            <DropdownMenu>
+              <DropdownMenuTrigger className="px-2.5 py-1 border border-neutral-200 dark:border-neutral-700 rounded-md bg-white dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 font-medium hover:bg-neutral-50 dark:hover:bg-neutral-850 transition">
+                {config.properties.find((p) => p.id === startDatePropId)?.name || "Choose Start Date"}
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="dark:bg-neutral-950">
+                {dateProperties.map((p) => (
+                  <DropdownMenuItem
+                    key={p.id}
+                    className="cursor-pointer text-xs"
+                    onClick={() => setStartDatePropId(p.id)}
+                  >
+                    {p.name}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            <ArrowRight className="h-3.5 w-3.5" />
+
+            {/* End Date Dropdown */}
+            <DropdownMenu>
+              <DropdownMenuTrigger className="px-2.5 py-1 border border-neutral-200 dark:border-neutral-700 rounded-md bg-white dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 font-medium hover:bg-neutral-50 dark:hover:bg-neutral-850 transition">
+                {config.properties.find((p) => p.id === endDatePropId)?.name || "Choose End Date"}
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="dark:bg-neutral-950">
+                <DropdownMenuItem
+                  className="cursor-pointer text-xs text-rose-500 font-semibold"
+                  onClick={() => setEndDatePropId("")}
+                >
+                  None (Single Day Bar)
+                </DropdownMenuItem>
+                {dateProperties.map((p) => (
+                  <DropdownMenuItem
+                    key={p.id}
+                    className="cursor-pointer text-xs"
+                    onClick={() => setEndDatePropId(p.id)}
+                  >
+                    {p.name}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        )}
+
         <div className="flex items-center gap-x-4">
           {/* Zoom levels */}
           <div className="flex items-center border border-neutral-200 dark:border-neutral-700 rounded-md p-0.5 bg-neutral-100 dark:bg-neutral-800 text-xs">
@@ -156,38 +233,66 @@ export const TimelineView = ({
             <div className="divide-y divide-neutral-100 dark:divide-neutral-800/60 relative">
               {subpages.map((page) => {
                 const row = parseDatabaseRow(page.content);
-                const dateProp = config.properties.find((p) => p.type === "date");
-                const itemDateStr = dateProp ? (row.values[dateProp.id] || "") : "";
+                const startDateStr = startDatePropId ? (row.values[startDatePropId] || "") : "";
+                const endDateStr = endDatePropId ? (row.values[endDatePropId] || "") : "";
 
+                if (startDateStr) {
+                  const startDate = new Date(startDateStr);
+                  const endDate = endDateStr ? new Date(endDateStr) : null;
+
+                  // Normalize dates to midnight local time
+                  const getMidnight = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
+                  const startMidnight = getMidnight(startDate);
+                  const endMidnight = endDate ? getMidnight(endDate) : startMidnight;
+
+                  const firstDay = getMidnight(days[0]);
+                  const lastDay = getMidnight(days[days.length - 1]);
+
+                  // Render block if it falls within the 30-day timeline view window
+                  if (startMidnight <= lastDay && endMidnight >= firstDay) {
+                    const msInDay = 24 * 60 * 60 * 1000;
+                    
+                    const startDiffDays = (startMidnight.getTime() - firstDay.getTime()) / msInDay;
+                    const endDiffDays = (endMidnight.getTime() - firstDay.getTime()) / msInDay;
+
+                    // Constrain start and end coordinates within the view boundaries
+                    const startPos = Math.max(0, startDiffDays);
+                    const endPos = Math.min(days.length - 1, endDiffDays);
+
+                    const leftOffset = startPos * 80 + 8;
+                    const width = Math.max(80, (endPos - startPos + 1) * 80 - 16);
+
+                    return (
+                      <div key={itemKey(page)} className="h-12 flex relative items-center min-w-[1200px]">
+                        {/* Background lines */}
+                        {days.map((_, idx) => (
+                          <div
+                            key={idx}
+                            className="w-20 h-full border-r border-neutral-100 dark:border-neutral-800/40 shrink-0"
+                          />
+                        ))}
+                        {/* Gantt Bar */}
+                        <Link
+                          href={`/documents/${page._id}`}
+                          className="absolute h-7 rounded-md bg-blue-500/10 border border-blue-500/30 text-blue-700 dark:text-blue-300 font-semibold text-[10px] flex items-center px-3 hover:bg-blue-500/20 transition cursor-pointer select-none truncate hover:scale-[1.01]"
+                          style={{ left: `${leftOffset}px`, width: `${width}px` }}
+                        >
+                          <span className="truncate">{page.title || "Untitled"}</span>
+                        </Link>
+                      </div>
+                    );
+                  }
+                }
+
+                // If no valid dates, render empty timeline row with background columns
                 return (
                   <div key={itemKey(page)} className="h-12 flex relative items-center min-w-[1200px]">
-                    {/* Background column lines */}
                     {days.map((_, idx) => (
                       <div
                         key={idx}
                         className="w-20 h-full border-r border-neutral-100 dark:border-neutral-800/40 shrink-0"
                       />
                     ))}
-
-                    {/* Gantt Bar overlay */}
-                    {itemDateStr && (
-                      (() => {
-                        // Find matching index of the date
-                        const targetIdx = days.findIndex((d) => getFormattedDateString(d) === itemDateStr);
-                        if (targetIdx === -1) return null;
-
-                        const leftOffset = targetIdx * 80 + 8; // 80px width columns
-                        return (
-                          <Link
-                            href={`/documents/${page._id}`}
-                            className="absolute h-7 rounded-md bg-blue-500/10 border border-blue-500/30 text-blue-700 dark:text-blue-300 font-semibold text-[10px] flex items-center px-3 hover:bg-blue-500/20 transition cursor-pointer select-none truncate hover:scale-[1.01]"
-                            style={{ left: `${leftOffset}px`, width: "120px" }}
-                          >
-                            <span className="truncate">{page.title || "Untitled"}</span>
-                          </Link>
-                        );
-                      })()
-                    )}
                   </div>
                 );
               })}

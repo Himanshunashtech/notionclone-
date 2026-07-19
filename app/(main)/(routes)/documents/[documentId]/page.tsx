@@ -15,11 +15,23 @@ import { BlockNoteEditor } from "@blocknote/core";
 import { TableOfContents } from "@/components/table-of-contents";
 import { useEditorFont } from "@/hooks/useEditorFont";
 import { SubpagesList } from "@/components/subpages-list";
-import { isDatabase } from "@/components/database/database-utils";
+import { isDatabase, parseDatabaseConfig, parseDatabaseRow } from "@/components/database/database-utils";
 import { DatabaseView } from "@/components/database/DatabaseView";
+import { TableView } from "@/components/database/TableView";
+import { KanbanBoard } from "@/components/database/KanbanBoard";
 import { TemplatesMenu } from "@/components/database/TemplatesMenu";
 import { HistorySidebar } from "@/components/modals/HistorySidebar";
+import { MeetingTranscription } from "@/components/meeting-transcription";
 import { useRef } from "react";
+import { FileText, CheckSquare2, CalendarDays, BookOpen, Calendar, ArrowUpRight, ListFilter, User, MessageSquare, Plus } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { useUser } from "@/components/providers/supabase-provider";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface DocumentIdPageProps {
   params:
@@ -38,7 +50,9 @@ const DocumentIdPage = ({ params }: DocumentIdPageProps) => {
       : (params as any);
   const { documentId } = resolvedParams;
   const [editor, setEditor] = useState<BlockNoteEditor | null>(null);
+  const [projectTab, setProjectTab] = useState<"content" | "tasks" | "meetings" | "docs" | any>("content");
   const { resolvedTheme } = useTheme();
+  const { user } = useUser();
   
   const lastSavedRef = useRef<number>(Date.now());
 
@@ -51,7 +65,79 @@ const DocumentIdPage = ({ params }: DocumentIdPageProps) => {
     documentId: documentId,
   });
 
+  const parentDoc = useQuery(
+    api.documents.getById,
+    doc?.parentDocument ? { documentId: doc.parentDocument } : "skip"
+  );
+  const grandparentDoc = useQuery(
+    api.documents.getById,
+    parentDoc?.parentDocument ? { documentId: parentDoc.parentDocument } : "skip"
+  );
+  const isProjectPage = parentDoc?.title === "Projects";
+  const isTaskPage = parentDoc?.title === "Tasks";
+  const isMeetingPage = parentDoc?.title === "Meetings";
+  const isDocPage = parentDoc?.title === "Docs";
+  const isGoalPage = parentDoc?.title === "Goals";
+
+  const rootDocs = useQuery(api.documents.getSidebar, {});
+  const teamspaceId = parentDoc?.parentDocument;
+  const teamspaceDocs = useQuery(
+    api.documents.getSidebar,
+    teamspaceId ? { parentDocument: teamspaceId } : "skip"
+  );
+
+  const tasksDb = teamspaceId
+    ? teamspaceDocs?.find((d) => d.title === "Tasks")
+    : rootDocs?.find((d) => d.title === "Tasks");
+  const meetingsDb = teamspaceId
+    ? teamspaceDocs?.find((d) => d.title === "Meetings")
+    : rootDocs?.find((d) => d.title === "Meetings");
+  const docsDb = teamspaceId
+    ? teamspaceDocs?.find((d) => d.title === "Docs")
+    : rootDocs?.find((d) => d.title === "Docs");
+
+  const allTasks = useQuery(
+    api.documents.getSidebar,
+    tasksDb?._id ? { parentDocument: tasksDb._id } : "skip"
+  );
+  const allMeetings = useQuery(
+    api.documents.getSidebar,
+    meetingsDb?._id ? { parentDocument: meetingsDb._id } : "skip"
+  );
+  const allDocs = useQuery(
+    api.documents.getSidebar,
+    docsDb?._id ? { parentDocument: docsDb._id } : "skip"
+  );
+
+  const projectsDb = teamspaceId
+    ? teamspaceDocs?.find((d) => d.title === "Projects")
+    : rootDocs?.find((d) => d.title === "Projects");
+  
+  const allProjects = useQuery(
+    api.documents.getSidebar,
+    projectsDb?._id ? { parentDocument: projectsDb._id } : "skip"
+  );
+
   const { editorFont, isFontLoading } = useEditorFont({ enabled: true });
+
+  const [teamspaceIds, setTeamspaceIds] = useState<string[]>([]);
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem("teamspaceIds");
+      if (stored) {
+        setTeamspaceIds(JSON.parse(stored));
+      }
+    } catch {}
+  }, []);
+
+  const TEAMSPACE_TITLES = ["Projects", "Meetings", "Docs", "Tasks", "Brainstorming Session", "Goals"];
+
+  const isTeamspacePage = 
+    teamspaceIds.includes(documentId) || 
+    TEAMSPACE_TITLES.includes(doc?.title || "") ||
+    !!(parentDoc && (teamspaceIds.includes(parentDoc._id) || TEAMSPACE_TITLES.includes(parentDoc.title || ""))) ||
+    !!(grandparentDoc && (teamspaceIds.includes(grandparentDoc._id) || TEAMSPACE_TITLES.includes(grandparentDoc.title || "")));
 
   const update = useMutation(api.documents.update);
 
@@ -143,6 +229,55 @@ const DocumentIdPage = ({ params }: DocumentIdPageProps) => {
   const isDb = isDatabase(doc.content);
   const isEmpty = !doc.content || doc.content === "";
 
+  const rowData = parseDatabaseRow(doc.content);
+  const linkedTaskIds = rowData.values["tasks"] ? rowData.values["tasks"].split(",").filter(Boolean) : [];
+  const linkedMeetingIds = rowData.values["meetings"] ? rowData.values["meetings"].split(",").filter(Boolean) : [];
+  const linkedDocIds = rowData.values["docs"] ? rowData.values["docs"].split(",").filter(Boolean) : [];
+
+  const projectTasks = (allTasks || []).filter((t) => linkedTaskIds.includes(t._id));
+  const projectMeetings = (allMeetings || []).filter((m) => linkedMeetingIds.includes(m._id));
+  const projectDocs = (allDocs || []).filter((d) => linkedDocIds.includes(d._id));
+
+  const handleUpdateProperty = async (propId: string, val: string) => {
+    const updatedValues = {
+      ...rowData.values,
+      [propId]: val,
+    };
+    const newContent = JSON.stringify({
+      ...rowData,
+      values: updatedValues,
+    }, null, 2);
+
+    await update({
+      id: documentId,
+      content: newContent,
+    });
+  };
+
+  const comments = rowData.comments || [];
+
+  const handleAddComment = async (text: string) => {
+    if (!text.trim()) return;
+
+    const newComment = {
+      id: Math.random().toString(36).substring(2, 9),
+      author: user?.fullName || user?.emailAddresses?.[0]?.emailAddress || "Anonymous",
+      avatar: user?.imageUrl || "",
+      content: text,
+      createdAt: Date.now(),
+    };
+
+    const newContent = JSON.stringify({
+      ...rowData,
+      comments: [...comments, newComment],
+    }, null, 2);
+
+    await update({
+      id: documentId,
+      content: newContent,
+    });
+  };
+
   return (
     <div className="pb-35">
       <Cover url={doc.coverImage} />
@@ -152,29 +287,286 @@ const DocumentIdPage = ({ params }: DocumentIdPageProps) => {
         }`}
       >
         <Toolbar initialData={doc} editorFont={activeFont} />
-        {isDb ? (
-          <DatabaseView
-            documentId={documentId}
-            initialContent={doc.content}
-          />
-        ) : (
-          <>
-            {isEmpty && (
-              <TemplatesMenu
-                documentId={documentId}
-                onSelect={handleSelectTemplate}
-              />
+        {(isTaskPage || isMeetingPage || isDocPage || isGoalPage) && parentDoc && (() => {
+          // Find if any project links this document
+          let parentProjectName = "";
+          let parentProjectId = "";
+          if (allProjects) {
+            for (const p of allProjects) {
+              const pRow = parseDatabaseRow(p.content);
+              const tasks = pRow.values["tasks"] ? pRow.values["tasks"].split(",").filter(Boolean) : [];
+              const meetings = pRow.values["meetings"] ? pRow.values["meetings"].split(",").filter(Boolean) : [];
+              const docs = pRow.values["docs"] ? pRow.values["docs"].split(",").filter(Boolean) : [];
+              
+              if (tasks.includes(documentId) || meetings.includes(documentId) || docs.includes(documentId)) {
+                parentProjectName = p.title;
+                parentProjectId = p._id;
+                break;
+              }
+            }
+          }
+
+          return (
+            <div className="space-y-6 max-w-lg mb-8 border-b border-neutral-200 dark:border-neutral-800 pb-6">
+              {parentProjectName && (
+                <div className="flex items-center gap-x-2 text-xs text-neutral-500 dark:text-neutral-400 bg-neutral-100 dark:bg-neutral-850 px-3 py-2 rounded-md border border-neutral-200 dark:border-neutral-750">
+                  <span className="font-semibold select-none">Project:</span>
+                  <a href={`/documents/${parentProjectId}`} className="text-blue-500 hover:underline font-medium flex items-center gap-x-1">
+                    <span>🎯</span>
+                    <span>{parentProjectName}</span>
+                  </a>
+                </div>
+              )}
+              {/* Properties list */}
+              <div className="space-y-4">
+              {parseDatabaseConfig(parentDoc.content).properties.map((p) => {
+                const val = rowData.values[p.id] || "";
+                let PropIcon = Calendar;
+                if (p.id === "status" || p.name.toLowerCase() === "status") {
+                  PropIcon = ListFilter;
+                } else if (p.type === "relation") {
+                  PropIcon = ArrowUpRight;
+                } else if (p.id === "assignee" || p.name.toLowerCase() === "assignee" || p.id === "attendees" || p.name.toLowerCase() === "attendees") {
+                  PropIcon = User;
+                }
+
+                return (
+                  <div key={p.id} className="grid grid-cols-3 gap-x-4 items-center text-sm">
+                    <div className="flex items-center gap-x-2 text-muted-foreground select-none">
+                      <PropIcon className="h-4 w-4 shrink-0" />
+                      <span>{p.name}</span>
+                    </div>
+                    <div className="col-span-2">
+                      {p.type === "select" ? (
+                        <DropdownMenu>
+                          <DropdownMenuTrigger className="px-2 py-1 rounded-md text-xs font-semibold bg-neutral-100 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 border border-neutral-200 dark:border-neutral-700 hover:opacity-85 transition">
+                            {val || "Empty"}
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="start" className="dark:bg-neutral-900">
+                            {(p.options || []).map((opt) => (
+                              <DropdownMenuItem
+                                key={opt}
+                                onClick={() => handleUpdateProperty(p.id, opt)}
+                                className="text-xs cursor-pointer"
+                              >
+                                {opt}
+                              </DropdownMenuItem>
+                            ))}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      ) : p.type === "date" ? (
+                        <input
+                          type="date"
+                          value={val}
+                          onChange={(e) => handleUpdateProperty(p.id, e.target.value)}
+                          className="px-2 py-1 text-xs rounded-md bg-transparent border border-neutral-205 dark:border-neutral-750 focus:ring-1 focus:ring-blue-500 outline-hidden dark:text-neutral-200"
+                        />
+                      ) : p.type === "relation" ? (
+                        <div className="text-xs text-neutral-700 dark:text-neutral-300">
+                          {val ? (
+                            <span className="px-2 py-1 rounded-md bg-neutral-100 dark:bg-neutral-850 font-medium">
+                              {rootDocs?.find((d) => d._id === val)?.title || val}
+                            </span>
+                          ) : (
+                            <span className="text-neutral-400">Empty</span>
+                          )}
+                        </div>
+                      ) : (
+                        <input
+                          type="text"
+                          value={val}
+                          onChange={(e) => handleUpdateProperty(p.id, e.target.value)}
+                          placeholder="Empty"
+                          className="w-full px-2 py-1 text-xs rounded-md bg-transparent border border-transparent hover:border-neutral-200 dark:hover:border-neutral-750 focus:border-neutral-200 dark:focus:border-neutral-750 focus:ring-1 focus:ring-blue-500 outline-hidden dark:text-neutral-200"
+                        />
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Comments List */}
+            <div className="pt-4 border-t border-neutral-200 dark:border-neutral-800 space-y-4">
+              <div className="text-sm font-semibold text-neutral-800 dark:text-neutral-200">
+                Comments
+              </div>
+              <div className="space-y-3">
+                {comments.map((c: any) => (
+                  <div key={c.id} className="flex items-start gap-x-3 text-xs">
+                    <div className="h-6 w-6 rounded-full bg-blue-500 text-white font-bold flex items-center justify-center select-none text-[10px] shrink-0">
+                      {c.author.substring(0, 1).toUpperCase()}
+                    </div>
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-x-2">
+                        <span className="font-semibold text-neutral-700 dark:text-neutral-300">{c.author}</span>
+                        <span className="text-[10px] text-muted-foreground">
+                          {new Date(c.createdAt).toLocaleDateString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                        </span>
+                      </div>
+                      <p className="text-neutral-600 dark:text-neutral-400">{c.content}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="flex items-center gap-x-3 pt-2">
+                <div className="h-6 w-6 rounded-full bg-neutral-300 dark:bg-neutral-700 font-bold flex items-center justify-center select-none text-[10px] text-neutral-600 dark:text-neutral-400 shrink-0">
+                  {user?.fullName?.substring(0, 1).toUpperCase() || "M"}
+                </div>
+                <input
+                  type="text"
+                  placeholder="Add a comment..."
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      handleAddComment((e.target as HTMLInputElement).value);
+                      (e.target as HTMLInputElement).value = "";
+                    }
+                  }}
+                  className="flex-1 px-3 py-1.5 text-xs bg-neutral-50 dark:bg-neutral-850 border border-neutral-205 dark:border-neutral-750 rounded-md outline-hidden focus:ring-1 focus:ring-blue-500 text-neutral-700 dark:text-neutral-300"
+                />
+              </div>
+            </div>
+            {isMeetingPage && (
+              <div className="pt-6 border-t border-neutral-200 dark:border-neutral-800">
+                <MeetingTranscription meetingTitle={doc.title || "Untitled"} />
+              </div>
             )}
-            <Editor
-              key={documentId}
-              onChange={onChange}
+          </div>
+        );
+      })()}
+        {isProjectPage ? (
+          <div className="space-y-6">
+            {/* Project Tabs Bar */}
+            <div className="flex items-center gap-x-2 border-b border-neutral-200 dark:border-neutral-800 pb-2 mb-6">
+              <button
+                onClick={() => setProjectTab("content")}
+                className={cn(
+                  "flex items-center gap-x-2 px-3 py-1.5 text-xs font-semibold rounded-md transition",
+                  projectTab === "content"
+                    ? "bg-neutral-200 dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100"
+                    : "text-muted-foreground hover:bg-neutral-100 dark:hover:bg-neutral-800/40"
+                )}
+              >
+                <FileText className="h-4 w-4" />
+                <span>Content</span>
+              </button>
+              <button
+                onClick={() => setProjectTab("tasks")}
+                className={cn(
+                  "flex items-center gap-x-2 px-3 py-1.5 text-xs font-semibold rounded-md transition",
+                  projectTab === "tasks"
+                    ? "bg-neutral-200 dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100"
+                    : "text-muted-foreground hover:bg-neutral-100 dark:hover:bg-neutral-800/40"
+                )}
+              >
+                <CheckSquare2 className="h-4 w-4" />
+                <span>Tasks</span>
+              </button>
+              <button
+                onClick={() => setProjectTab("meetings")}
+                className={cn(
+                  "flex items-center gap-x-2 px-3 py-1.5 text-xs font-semibold rounded-md transition",
+                  projectTab === "meetings"
+                    ? "bg-neutral-200 dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100"
+                    : "text-muted-foreground hover:bg-neutral-100 dark:hover:bg-neutral-800/40"
+                )}
+              >
+                <CalendarDays className="h-4 w-4" />
+                <span>Meetings</span>
+              </button>
+              <button
+                onClick={() => setProjectTab("docs")}
+                className={cn(
+                  "flex items-center gap-x-2 px-3 py-1.5 text-xs font-semibold rounded-md transition",
+                  projectTab === "docs"
+                    ? "bg-neutral-200 dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100"
+                    : "text-muted-foreground hover:bg-neutral-100 dark:hover:bg-neutral-800/40"
+                )}
+              >
+                <BookOpen className="h-4 w-4" />
+                <span>Docs</span>
+              </button>
+            </div>
+
+            {/* Active Tab View */}
+            {projectTab === "content" && (
+              <>
+                <Editor
+                  key={documentId}
+                  onChange={onChange}
+                  initialContent={doc.content}
+                  smallText={isSmallText}
+                  onEditorReady={setEditor}
+                  editorFont={activeFont}
+                />
+                {showToc && <TableOfContents editor={editor} />}
+              </>
+            )}
+
+            {projectTab === "tasks" && (
+              <div className="space-y-4">
+                {tasksDb ? (
+                  <KanbanBoard
+                    documentId={tasksDb._id}
+                    config={parseDatabaseConfig(tasksDb.content)}
+                    subpages={projectTasks}
+                    preview={false}
+                  />
+                ) : (
+                  <div className="text-sm text-muted-foreground">Tasks database not found</div>
+                )}
+              </div>
+            )}
+
+            {projectTab === "meetings" && (
+              <div className="space-y-4">
+                {meetingsDb ? (
+                  <TableView
+                    documentId={meetingsDb._id}
+                    config={parseDatabaseConfig(meetingsDb.content)}
+                    subpages={projectMeetings}
+                    preview={false}
+                  />
+                ) : (
+                  <div className="text-sm text-muted-foreground">Meetings database not found</div>
+                )}
+              </div>
+            )}
+
+            {projectTab === "docs" && (
+              <div className="space-y-4">
+                {docsDb ? (
+                  <TableView
+                    documentId={docsDb._id}
+                    config={parseDatabaseConfig(docsDb.content)}
+                    subpages={projectDocs}
+                    preview={false}
+                  />
+                ) : (
+                  <div className="text-sm text-muted-foreground">Docs database not found</div>
+                )}
+              </div>
+            )}
+          </div>
+        ) : (
+          isDb ? (
+            <DatabaseView
+              documentId={documentId}
               initialContent={doc.content}
-              smallText={isSmallText}
-              onEditorReady={setEditor}
-              editorFont={activeFont}
             />
-            {showToc && <TableOfContents editor={editor} />}
-          </>
+          ) : (
+            <>
+              <Editor
+                key={documentId}
+                onChange={onChange}
+                initialContent={doc.content}
+                smallText={isSmallText}
+                onEditorReady={setEditor}
+                editorFont={activeFont}
+              />
+              {showToc && <TableOfContents editor={editor} />}
+            </>
+          )
         )}
         <SubpagesList documentId={documentId} />
       </div>

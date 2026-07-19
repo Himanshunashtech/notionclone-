@@ -24,6 +24,8 @@ import {
   Settings,
   Star,
   Trash,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 
 import { ActionTooltip } from "@/components/action-tooltip";
@@ -45,6 +47,9 @@ interface ItemProps {
   shortcut?: string;
   showDragHandle?: boolean;
   navDrawer?: boolean;
+  isTeamspace?: boolean;
+  isHidden?: boolean;
+  onToggleHide?: () => void;
 }
 
 export const Item = ({
@@ -62,6 +67,9 @@ export const Item = ({
   shortcut,
   showDragHandle = true,
   navDrawer,
+  isTeamspace,
+  isHidden,
+  onToggleHide,
 }: ItemProps) => {
   const router = useRouter();
   const params = useParams();
@@ -76,6 +84,17 @@ export const Item = ({
     api.documents.getById,
     id ? { documentId: id } : "skip",
   );
+
+  const isCustomTeamspace = isTeamspace && id && (() => {
+    try {
+      const stored = localStorage.getItem("teamspaceIds");
+      if (stored) {
+        const ids = JSON.parse(stored);
+        return ids.includes(id);
+      }
+    } catch {}
+    return false;
+  })();
 
   const onArchive = (event: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
     event.stopPropagation();
@@ -99,6 +118,38 @@ export const Item = ({
           onClick: () => restore({ id }),
         },
       });
+    });
+  };
+
+  const onDeleteTeamspace = (event: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
+    event.stopPropagation();
+    if (!id) return;
+
+    const ok = window.confirm("Are you sure you want to delete this teamspace and all its data? This action cannot be undone.");
+    if (!ok) return;
+
+    if (params.documentId === id) {
+      router.push("/documents");
+    }
+
+    const promise = archive({ id }).then(() => {
+      try {
+        const stored = localStorage.getItem("teamspaceIds");
+        if (stored) {
+          const ids = JSON.parse(stored) as string[];
+          const filtered = ids.filter((tId) => tId !== id);
+          localStorage.setItem("teamspaceIds", JSON.stringify(filtered));
+        }
+      } catch (err) {
+        console.error(err);
+      }
+      window.location.reload();
+    });
+
+    toast.promise(promise, {
+      loading: "Deleting teamspace...",
+      success: "Teamspace deleted successfully!",
+      error: "Failed to delete teamspace.",
     });
   };
 
@@ -215,24 +266,55 @@ export const Item = ({
               side="right"
               forceMount
             >
-              <DropdownMenuItem
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onFavorite?.();
-                }}
-              >
-                <Star
-                  className={cn(
-                    "mr-2 h-4 w-4",
-                    isFavorite && "fill-yellow-400 text-yellow-400",
+              {!isTeamspace && (
+                <DropdownMenuItem
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onFavorite?.();
+                  }}
+                >
+                  <Star
+                    className={cn(
+                      "mr-2 h-4 w-4",
+                      isFavorite && "fill-yellow-400 text-yellow-400",
+                    )}
+                  />
+                  {isFavorite ? "Remove from favorites" : "Add to favorites"}
+                </DropdownMenuItem>
+              )}
+               {isTeamspace ? (
+                <>
+                  <DropdownMenuItem
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onToggleHide?.();
+                    }}
+                  >
+                    {isHidden ? (
+                      <>
+                        <Eye className="mr-2 h-4 w-4" />
+                        Show in Teamspace
+                      </>
+                    ) : (
+                      <>
+                        <EyeOff className="mr-2 h-4 w-4" />
+                        Hide from Teamspace
+                      </>
+                    )}
+                  </DropdownMenuItem>
+                  {isCustomTeamspace && (
+                    <DropdownMenuItem onClick={onDeleteTeamspace}>
+                      <Trash className="mr-2 h-4 w-4" />
+                      Delete Teamspace
+                    </DropdownMenuItem>
                   )}
-                />
-                {isFavorite ? "Remove from favorites" : "Add to favorites"}
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={onArchive}>
-                <Trash className="mr-2 h-4 w-4" />
-                Delete
-              </DropdownMenuItem>
+                </>
+              ) : (
+                <DropdownMenuItem onClick={onArchive}>
+                  <Trash className="mr-2 h-4 w-4" />
+                  Delete
+                </DropdownMenuItem>
+              )}
               <DropdownMenuSeparator />
               <div className="space-y-0.5 p-2 text-[.6875rem]">
                 <p className="text-muted-foreground/70">
