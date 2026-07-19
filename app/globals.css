@@ -120,6 +120,10 @@
   --font-inter: var(--font-inter);
   --font-lora: var(--font-lora);
   --font-jetbrains-mono: var(--font-jetbrains-mono);
+  --color-neutral-205: #dddddd;
+  --color-neutral-750: #333333;
+  --color-neutral-850: #202020;
+  --color-neutral-905: #1a1a1a;
 }
 
 @utility container {

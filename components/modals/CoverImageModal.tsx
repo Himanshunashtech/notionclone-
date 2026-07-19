@@ -10,7 +10,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useCoverImage } from "@/hooks/useCoverImage";
 import { SingleImageDropzone } from "@/components/single-image-dropzone";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useSupabaseStorage } from "@/hooks/use-supabase-storage";
 import { useMutation } from "@/hooks/use-supabase-db";
 import { api } from "@/lib/supabase-db";
@@ -21,6 +21,7 @@ import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { Loader2 } from "lucide-react";
 
 const COVER_COLORS = [
   "#f87171",
@@ -77,11 +78,60 @@ export const CoverImageModal = () => {
   const [inputUrl, setInputUrl] = useState("");
   const [visibleCount, setVisibleCount] = useState(9);
 
+  // Bigger Gallery States
+  const [isBiggerOpen, setIsBiggerOpen] = useState(false);
+  const [biggerImages, setBiggerImages] = useState<Array<{ id: string; url: string }>>([]);
+  const [page, setPage] = useState(1);
+  const [loadingBigger, setLoadingBigger] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+
   const update = useMutation(api.documents.update);
   const coverImage = useCoverImage();
   const { uploadFile, deleteFile } = useSupabaseStorage();
 
   const [isDragging, setIsDragging] = useState(false);
+
+  const fetchMoreImages = async (pageNum: number) => {
+    if (loadingBigger) return;
+    try {
+      setLoadingBigger(true);
+      const res = await fetch(`https://picsum.photos/v2/list?page=${pageNum}&limit=18`);
+      if (!res.ok) throw new Error("Failed to fetch");
+      const data = await res.json();
+      if (data.length === 0) {
+        setHasMore(false);
+        return;
+      }
+      const newImages = data.map((item: any) => ({
+        id: item.id,
+        url: `https://picsum.photos/id/${item.id}/800/450`
+      }));
+      setBiggerImages((prev) => [...prev, ...newImages]);
+    } catch (error) {
+      console.error("Error fetching images:", error);
+    } finally {
+      setLoadingBigger(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isBiggerOpen && biggerImages.length === 0) {
+      fetchMoreImages(1);
+    }
+  }, [isBiggerOpen]);
+
+  const handleBiggerScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const target = e.currentTarget;
+    if (target.scrollHeight - target.scrollTop <= target.clientHeight + 40) {
+      if (!loadingBigger && hasMore) {
+        setPage((prev) => {
+          const next = prev + 1;
+          fetchMoreImages(next);
+          return next;
+        });
+      }
+    }
+  };
 
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
     const target = e.currentTarget;
@@ -122,6 +172,7 @@ export const CoverImageModal = () => {
     setIsSubmitting(false);
     setInputUrl("");
     setVisibleCount(9);
+    setIsBiggerOpen(false);
     coverImage.onClose();
   };
 
@@ -200,76 +251,146 @@ export const CoverImageModal = () => {
   };
 
   return (
-    <Dialog open={coverImage.isOpen} onOpenChange={coverImage.onClose}>
-      <DialogTitle>
-        <span className="sr-only">Change Cover Image</span>
-      </DialogTitle>
-      <DialogContent className="dark:bg-dark">
-        <DialogHeader>
-          <h2 className="text-center text-lg font-semibold">Cover Image</h2>
-        </DialogHeader>
-        <DialogDescription className="sr-only">
-          Upload a cover image or choose a color for your document.
-        </DialogDescription>
-        <Tabs defaultValue="upload">
-          <TabsList className="w-full">
-            <TabsTrigger value="upload" className="flex-1">
-              Upload
-            </TabsTrigger>
-            <TabsTrigger value="colors" className="flex-1">
-              Colors
-            </TabsTrigger>
-            <TabsTrigger value="gallery" className="flex-1">
-              Gallery
-            </TabsTrigger>
-          </TabsList>
-          <TabsContent value="upload">
-            <SingleImageDropzone
-              className="w-full outline-hidden"
-              disabled={isSubmitting}
-              value={file}
-              onChange={onChange}
-              isDragging={isDragging}
-            />
-          </TabsContent>
-          <TabsContent value="colors">
-            <div className="grid grid-cols-4 gap-2 p-2">
-              {COVER_COLORS.map((color) => (
+    <>
+      <Dialog open={coverImage.isOpen} onOpenChange={onClose}>
+        <DialogTitle>
+          <span className="sr-only">Change Cover Image</span>
+        </DialogTitle>
+        <DialogContent className="dark:bg-dark">
+          <DialogHeader>
+            <h2 className="text-center text-lg font-semibold">Cover Image</h2>
+          </DialogHeader>
+          <DialogDescription className="sr-only">
+            Upload a cover image or choose a color for your document.
+          </DialogDescription>
+          <Tabs defaultValue="upload">
+            <TabsList className="w-full">
+              <TabsTrigger value="upload" className="flex-1">
+                Upload
+              </TabsTrigger>
+              <TabsTrigger value="colors" className="flex-1">
+                Colors
+              </TabsTrigger>
+              <TabsTrigger value="gallery" className="flex-1">
+                Gallery
+              </TabsTrigger>
+            </TabsList>
+            <TabsContent value="upload">
+              <SingleImageDropzone
+                className="w-full outline-hidden"
+                disabled={isSubmitting}
+                value={file}
+                onChange={onChange}
+                isDragging={isDragging}
+              />
+            </TabsContent>
+            <TabsContent value="colors">
+              <div className="grid grid-cols-4 gap-2 p-2">
+                {COVER_COLORS.map((color) => (
+                  <button
+                    key={color}
+                    onClick={() => onSelectColor(color)}
+                    className={cn(
+                      "border-border h-14 w-full rounded-md border transition-transform hover:scale-105 hover:shadow-md",
+                      coverImage.url === color &&
+                        "ring-primary ring-2 ring-offset-2",
+                    )}
+                    style={{ background: color }}
+                  />
+                ))}
+              </div>
+            </TabsContent>
+            <TabsContent value="gallery" className="space-y-4">
+              <div
+                onScroll={handleScroll}
+                className="grid grid-cols-3 gap-2 p-2 max-h-[300px] overflow-y-auto"
+              >
+                {COVER_IMAGES.slice(0, visibleCount).map((imgUrl) => (
+                  <button
+                    key={imgUrl}
+                    onClick={() => onSelectColor(imgUrl)}
+                    className={cn(
+                      "relative border border-border h-16 w-full rounded-md overflow-hidden transition-transform hover:scale-105 hover:shadow-md bg-muted",
+                      coverImage.url === imgUrl &&
+                        "ring-primary ring-2 ring-offset-2",
+                    )}
+                  >
+                    <img src={imgUrl} className="object-cover w-full h-full" alt="Cover option" />
+                  </button>
+                ))}
+              </div>
+              <div className="flex justify-center border-t pt-3">
+                <Button
+                  variant="outline"
+                  onClick={() => setIsBiggerOpen(true)}
+                  className="w-full text-xs font-medium hover:bg-muted"
+                >
+                  Show more images
+                </Button>
+              </div>
+            </TabsContent>
+          </Tabs>
+        </DialogContent>
+      </Dialog>
+
+      {/* Bigger Gallery Dialog */}
+      <Dialog open={isBiggerOpen} onOpenChange={(open) => setIsBiggerOpen(open)}>
+        <DialogTitle>
+          <span className="sr-only">Explore Unlimited Cover Images</span>
+        </DialogTitle>
+        <DialogContent className="max-w-4xl h-[85vh] flex flex-col p-6 dark:bg-dark">
+          <DialogHeader>
+            <h2 className="text-xl font-bold">Explore Cover Images</h2>
+            <p className="text-muted-foreground text-sm">
+              Scroll down to discover and load unlimited beautiful covers for your document.
+            </p>
+          </DialogHeader>
+          <div
+            onScroll={handleBiggerScroll}
+            className="flex-1 overflow-y-auto pr-2 mt-4 grid grid-cols-2 md:grid-cols-3 gap-3"
+          >
+            {biggerImages.map((img) => (
+              <div key={img.id + img.url} className="relative group pb-4 pr-4">
+                {/* File stack deck layers behind */}
+                <div className="absolute inset-0 bg-neutral-200/50 dark:bg-neutral-800/40 rounded-lg translate-y-2 translate-x-2 scale-[0.98] transition-all duration-300 group-hover:translate-y-3.5 group-hover:translate-x-3.5 group-hover:scale-[0.96] border border-neutral-300/30 dark:border-neutral-700/20" />
+                <div className="absolute inset-0 bg-neutral-300/50 dark:bg-neutral-800/60 rounded-lg translate-y-1 translate-x-1 scale-[0.99] transition-all duration-300 group-hover:translate-y-2 group-hover:translate-x-2 group-hover:scale-[0.98] border border-neutral-300/50 dark:border-neutral-700/40" />
+
+                {/* Main Image Card */}
                 <button
-                  key={color}
-                  onClick={() => onSelectColor(color)}
+                  onClick={() => onSelectColor(img.url)}
                   className={cn(
-                    "border-border h-14 w-full rounded-md border transition-transform hover:scale-105 hover:shadow-md",
-                    coverImage.url === color &&
-                      "ring-primary ring-2 ring-offset-2",
-                  )}
-                  style={{ background: color }}
-                />
-              ))}
-            </div>
-          </TabsContent>
-          <TabsContent value="gallery">
-            <div
-              onScroll={handleScroll}
-              className="grid grid-cols-3 gap-2 p-2 max-h-[300px] overflow-y-auto"
-            >
-              {COVER_IMAGES.slice(0, visibleCount).map((imgUrl) => (
-                <button
-                  key={imgUrl}
-                  onClick={() => onSelectColor(imgUrl)}
-                  className={cn(
-                    "relative border border-border h-16 w-full rounded-md overflow-hidden transition-transform hover:scale-105 hover:shadow-md bg-muted",
-                    coverImage.url === imgUrl &&
-                      "ring-primary ring-2 ring-offset-2",
+                    "relative aspect-video border border-border w-full rounded-lg overflow-hidden transition-all duration-300 group-hover:-translate-y-2 group-hover:-translate-x-1 group-hover:scale-[1.01] shadow-md group-hover:shadow-xl bg-muted z-10",
+                    coverImage.url === img.url && "ring-primary ring-2 ring-offset-2"
                   )}
                 >
-                  <img src={imgUrl} className="object-cover w-full h-full" alt="Cover option" />
+                  <img
+                    src={img.url}
+                    className="object-cover w-full h-full transition-transform duration-500 group-hover:scale-105"
+                    loading="lazy"
+                    alt="Gallery Option"
+                  />
+                  <div className="absolute inset-0 bg-black/10 opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
                 </button>
-              ))}
-            </div>
-          </TabsContent>
-        </Tabs>
-      </DialogContent>
-    </Dialog>
+              </div>
+            ))}
+            {loadingBigger && (
+              <div className="col-span-full flex justify-center items-center py-6">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              </div>
+            )}
+            {!hasMore && (
+              <div className="col-span-full text-center text-muted-foreground text-sm py-4">
+                You've reached the end of the collection.
+              </div>
+            )}
+          </div>
+          <div className="flex justify-end pt-4 border-t mt-4 gap-2">
+            <Button variant="outline" onClick={() => setIsBiggerOpen(false)}>
+              Back
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 };

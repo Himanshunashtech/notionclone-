@@ -39,7 +39,6 @@ export const AuthModal = () => {
     if (isPlaceholder) {
       const msg = "Connection failed! Please configure your Supabase URL and Anon Key in .env.local.";
       setError(msg);
-      toast.error(msg);
       setIsLoading(false);
       return;
     }
@@ -54,7 +53,6 @@ export const AuthModal = () => {
         if (!hasMinLength || !hasCapital || !hasNumber || !hasSpecial) {
           const msg = "Password does not meet the requirements.";
           setError(msg);
-          toast.error(msg);
           setIsLoading(false);
           return;
         }
@@ -89,7 +87,6 @@ export const AuthModal = () => {
         ? "Connection failed! Please configure your Supabase URL and Anon Key in .env.local."
         : err.message || "An error occurred during authentication.";
       setError(msg);
-      toast.error(msg);
     } finally {
       setIsLoading(false);
     }

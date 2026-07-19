@@ -32,6 +32,8 @@ import NotFound from "@/app/not-found";
 import LandingLayout from "@/app/(landing)/layout";
 import MainLayout from "@/app/(main)/layout";
 
+import { ReduxProvider } from "@/components/providers/redux-provider";
+
 // Shim helper for Next.js async page params
 const DocumentIdPageWrapper = () => {
   const { documentId } = useParams();
@@ -51,182 +53,184 @@ const PreviewPageWrapper = () => {
 
 export default function App() {
   return (
-    <SupabaseProvider>
-      <ThemeProvider
-        attribute="class"
-        defaultTheme="system"
-        enableSystem
-        disableTransitionOnChange
-        storageKey="zotion-theme-2"
-      >
-        <ToasterProvider />
-        <ModalProvider />
-        
-        <Routes>
-          {/* Landing routes */}
-          <Route
-            path="/"
-            element={
-              <LandingLayout>
-                <LandingPage />
-              </LandingLayout>
-            }
-          />
-          <Route
-            path="/overview"
-            element={
-              <LandingLayout>
-                <OverviewPage />
-              </LandingLayout>
-            }
-          />
-          <Route
-            path="/pricing"
-            element={
-              <LandingLayout>
-                <PricingPage />
-              </LandingLayout>
-            }
-          />
-          <Route
-            path="/integrations"
-            element={
-              <LandingLayout>
-                <IntegrationsPage />
-              </LandingLayout>
-            }
-          />
-          <Route
-            path="/changelog"
-            element={
-              <LandingLayout>
-                <ChangelogPage />
-              </LandingLayout>
-            }
-          />
-          <Route
-            path="/roadmap"
-            element={
-              <LandingLayout>
-                <RoadmapPage />
-              </LandingLayout>
-            }
-          />
-          <Route
-            path="/about"
-            element={
-              <LandingLayout>
-                <AboutPage />
-              </LandingLayout>
-            }
-          />
-          <Route
-            path="/careers"
-            element={
-              <LandingLayout>
-                <CareersPage />
-              </LandingLayout>
-            }
-          />
-          <Route
-            path="/press"
-            element={
-              <LandingLayout>
-                <PressPage />
-              </LandingLayout>
-            }
-          />
-          <Route
-            path="/blog"
-            element={
-              <LandingLayout>
-                <BlogPage />
-              </LandingLayout>
-            }
-          />
-          <Route
-            path="/culture"
-            element={
-              <LandingLayout>
-                <CulturePage />
-              </LandingLayout>
-            }
-          />
-          <Route
-            path="/privacy"
-            element={
-              <LandingLayout>
-                <PrivacyPage />
-              </LandingLayout>
-            }
-          />
-          <Route
-            path="/terms"
-            element={
-              <LandingLayout>
-                <TermsPage />
-              </LandingLayout>
-            }
-          />
-          <Route
-            path="/security"
-            element={
-              <LandingLayout>
-                <SecurityPage />
-              </LandingLayout>
-            }
-          />
-          <Route
-            path="/cookies"
-            element={
-              <LandingLayout>
-                <CookiesPage />
-              </LandingLayout>
-            }
-          />
+    <ReduxProvider>
+      <SupabaseProvider>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+          storageKey="zotion-theme-2"
+        >
+          <ToasterProvider />
+          <ModalProvider />
+          
+          <Routes>
+            {/* Landing routes */}
+            <Route
+              path="/"
+              element={
+                <LandingLayout>
+                  <LandingPage />
+                </LandingLayout>
+              }
+            />
+            <Route
+              path="/overview"
+              element={
+                <LandingLayout>
+                  <OverviewPage />
+                </LandingLayout>
+              }
+            />
+            <Route
+              path="/pricing"
+              element={
+                <LandingLayout>
+                  <PricingPage />
+                </LandingLayout>
+              }
+            />
+            <Route
+              path="/integrations"
+              element={
+                <LandingLayout>
+                  <IntegrationsPage />
+                </LandingLayout>
+              }
+            />
+            <Route
+              path="/changelog"
+              element={
+                <LandingLayout>
+                  <ChangelogPage />
+                </LandingLayout>
+              }
+            />
+            <Route
+              path="/roadmap"
+              element={
+                <LandingLayout>
+                  <RoadmapPage />
+                </LandingLayout>
+              }
+            />
+            <Route
+              path="/about"
+              element={
+                <LandingLayout>
+                  <AboutPage />
+                </LandingLayout>
+              }
+            />
+            <Route
+              path="/careers"
+              element={
+                <LandingLayout>
+                  <CareersPage />
+                </LandingLayout>
+              }
+            />
+            <Route
+              path="/press"
+              element={
+                <LandingLayout>
+                  <PressPage />
+                </LandingLayout>
+              }
+            />
+            <Route
+              path="/blog"
+              element={
+                <LandingLayout>
+                  <BlogPage />
+                </LandingLayout>
+              }
+            />
+            <Route
+              path="/culture"
+              element={
+                <LandingLayout>
+                  <CulturePage />
+                </LandingLayout>
+              }
+            />
+            <Route
+              path="/privacy"
+              element={
+                <LandingLayout>
+                  <PrivacyPage />
+                </LandingLayout>
+              }
+            />
+            <Route
+              path="/terms"
+              element={
+                <LandingLayout>
+                  <TermsPage />
+                </LandingLayout>
+              }
+            />
+            <Route
+              path="/security"
+              element={
+                <LandingLayout>
+                  <SecurityPage />
+                </LandingLayout>
+              }
+            />
+            <Route
+              path="/cookies"
+              element={
+                <LandingLayout>
+                  <CookiesPage />
+                </LandingLayout>
+              }
+            />
 
-          <Route
-            path="/documents"
-            element={
-              <MainLayout>
-                <DocumentsPage />
-              </MainLayout>
-            }
-          />
-          <Route
-            path="/library"
-            element={
-              <MainLayout>
-                <LibraryPage />
-              </MainLayout>
-            }
-          />
-          <Route
-            path="/calendar"
-            element={
-              <MainLayout>
-                <CalendarPage />
-              </MainLayout>
-            }
-          />
-          <Route
-            path="/documents/:documentId"
-            element={
-              <MainLayout>
-                <DocumentIdPageWrapper />
-              </MainLayout>
-            }
-          />
-          <Route
-            path="/preview/:documentId"
-            element={<PreviewPageWrapper />}
-          />
-          <Route
-            path="*"
-            element={<NotFound />}
-          />
-        </Routes>
-      </ThemeProvider>
-    </SupabaseProvider>
+            <Route
+              path="/documents"
+              element={
+                <MainLayout>
+                  <DocumentsPage />
+                </MainLayout>
+              }
+            />
+            <Route
+              path="/library"
+              element={
+                <MainLayout>
+                  <LibraryPage />
+                </MainLayout>
+              }
+            />
+            <Route
+              path="/calendar"
+              element={
+                <MainLayout>
+                  <CalendarPage />
+                </MainLayout>
+              }
+            />
+            <Route
+              path="/documents/:documentId"
+              element={
+                <MainLayout>
+                  <DocumentIdPageWrapper />
+                </MainLayout>
+              }
+            />
+            <Route
+              path="/preview/:documentId"
+              element={<PreviewPageWrapper />}
+            />
+            <Route
+              path="*"
+              element={<NotFound />}
+            />
+          </Routes>
+        </ThemeProvider>
+      </SupabaseProvider>
+    </ReduxProvider>
   );
 }

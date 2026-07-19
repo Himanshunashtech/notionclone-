@@ -45,8 +45,8 @@ export const OnboardingModal = () => {
           {/* Top illustration area */}
           <div className="relative px-8 pt-10 pb-6 flex flex-col items-center text-center">
             <div className="flex items-center justify-center gap-3 mb-6">
-              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center shadow-lg shadow-blue-500/30">
-                <Building2 className="h-7 w-7 text-white" />
+              <div className="w-14 h-14 rounded-2xl bg-neutral-800 flex items-center justify-center shadow-lg shadow-black/50 p-2.5 border border-white/10">
+                <img src="/logo-dark.svg" className="h-full w-full object-contain" alt="Zotion Logo" />
               </div>
             </div>
 
@@ -66,12 +66,12 @@ export const OnboardingModal = () => {
           {/* Features preview */}
           <div className="mx-8 mb-6 grid grid-cols-3 gap-2">
             {[
-              { icon: "🎯", label: "Projects" },
-              { icon: "📅", label: "Meetings" },
-              { icon: "📘", label: "Docs" },
-              { icon: "📋", label: "Tasks" },
-              { icon: "💡", label: "Brainstorm" },
-              { icon: "🏁", label: "Goals" },
+              { icon: "🍻", label: "Projects" },
+              { icon: "🍺", label: "Meetings" },
+              { icon: "🥂", label: "Docs" },
+              { icon: "🍹", label: "Tasks" },
+              { icon: "🍷", label: "Brainstorm" },
+              { icon: "🍾", label: "Goals" },
             ].map((item) => (
               <div
                 key={item.label}

@@ -18,16 +18,37 @@ import {
 import { useSearch } from "@/hooks/useSearch";
 import { api } from "@/lib/supabase-db";
 import { DialogTitle } from "./ui/dialog";
+import { useLazySearchDocumentsQuery } from "@/lib/apiSlice";
 
 export const SearchCommand = () => {
   const { user } = useUser();
   const router = useRouter();
-  const documents = useQuery(api.documents.getSearch);
+  const [search, setSearch] = useState("");
+  const [triggerSearch, { data: searchResults }] = useLazySearchDocumentsQuery();
+  const defaultDocuments = useQuery(api.documents.getSearch);
   const [isMounted, setIsMounted] = useState(false);
 
   const toggle = useSearch((store) => store.toggle);
   const isOpen = useSearch((store) => store.isOpen);
   const onClose = useSearch((store) => store.onClose);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    if (search.trim().length > 1) {
+      const delayDebounceFn = setTimeout(() => {
+        triggerSearch({ userId: user.id, query: search });
+      }, 300);
+      return () => clearTimeout(delayDebounceFn);
+    }
+  }, [search, user?.id, triggerSearch]);
+
+  const documents = search.trim().length > 1 ? searchResults : defaultDocuments;
+
+  useEffect(() => {
+    if (!isOpen) {
+      setSearch("");
+    }
+  }, [isOpen]);
 
   useEffect(() => {
     setIsMounted(true);
@@ -59,14 +80,19 @@ export const SearchCommand = () => {
       <DialogTitle hidden>Search Documents</DialogTitle>
       <Command
         loop
-        filter={(value, search) => {
+        shouldFilter={search.trim().length <= 1}
+        filter={(value, searchVal) => {
           const [documentTitle = ""] = value.split("|");
-          if (documentTitle.toLowerCase().includes(search.toLowerCase()))
+          if (documentTitle.toLowerCase().includes(searchVal.toLowerCase()))
             return 1;
           return 0;
         }}
       >
-        <CommandInput placeholder={`Search ${user?.fullName}'s Zotion..`} />
+        <CommandInput 
+          value={search}
+          onValueChange={setSearch}
+          placeholder={`Search ${user?.fullName}'s Zotion..`} 
+        />
         <CommandList>
           <CommandEmpty>No results found.</CommandEmpty>
           <CommandGroup heading="Documents" className="pb-1">

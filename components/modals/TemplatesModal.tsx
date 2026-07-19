@@ -463,16 +463,16 @@ const TemplateCardUI = ({
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       className={`
-        relative group text-left rounded-xl border p-4 transition-all duration-200 flex gap-3 items-start h-[125px] w-full overflow-hidden
+        relative group text-left rounded-xl border p-4 transition-all duration-200 flex gap-3 items-start h-[135px] w-full overflow-hidden
         ${isDark ? darkCard : lightCard}
         ${hovered ? "scale-[1.015] shadow-xl" : "scale-100"}
       `}
     >
       {/* Left: title + desc */}
-      <div className="flex flex-col justify-start min-w-0 flex-shrink-0 w-[95px] h-full">
+      <div className="flex flex-col justify-start min-w-0 flex-shrink-0 w-[130px] sm:w-[145px] h-full overflow-y-auto scrollbar-none">
         <span className="text-xl mb-1 shrink-0">{tmpl.emoji}</span>
         <h3 className={`text-[12px] font-bold leading-tight truncate ${isDark ? "text-white" : "text-gray-900"}`}>{tmpl.label}</h3>
-        <p className={`text-[10px] mt-1 leading-normal line-clamp-3 text-ellipsis ${isDark ? "text-white/50" : "text-gray-400"}`}>{tmpl.desc}</p>
+        <p className={`text-[10px] mt-1 leading-normal text-ellipsis ${isDark ? "text-white/50" : "text-gray-400"}`}>{tmpl.desc}</p>
       </div>
 
       {/* Right: mini preview — fills remaining space */}
@@ -541,11 +541,11 @@ export const TemplatesModal = () => {
       <DialogDescription className="sr-only">
         Choose a template type to create your new page.
       </DialogDescription>
-      <DialogContent className={`max-w-4xl w-[900px] h-[550px] p-0 overflow-hidden border-0 shadow-2xl transition-colors duration-300 ${modalBg}`}>
-        <div className={`flex flex-col h-full ${modalBg} transition-colors duration-300`}>
+      <DialogContent className={`max-w-5xl w-[95vw] md:w-[1000px] h-[85vh] md:h-[600px] p-0 overflow-hidden border-0 shadow-2xl transition-colors duration-300 ${modalBg}`}>
+        <div className={`flex flex-col h-full overflow-y-auto md:overflow-hidden ${modalBg} transition-colors duration-300`}>
 
           {/* Header */}
-          <div className={`flex items-center justify-between px-6 pt-5 pb-4 border-b shrink-0 ${headerBorder}`}>
+          <div className={`flex items-center justify-between px-4 md:px-6 pt-5 pb-4 border-b shrink-0 ${headerBorder}`}>
             <div className="flex items-center gap-2.5">
               <div className={`p-2 rounded-lg border ${iconBg}`}>
                 <Sparkles className={`h-4 w-4 ${iconColor}`} />
@@ -557,8 +557,8 @@ export const TemplatesModal = () => {
             </div>
           </div>
 
-          {/* Grid — 3 columns, horizontal cards */}
-          <div className="grid grid-cols-3 gap-4 p-6 overflow-y-auto flex-1 custom-scrollbar">
+          {/* Grid — responsive columns */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 p-4 md:p-6 overflow-y-auto flex-1 custom-scrollbar">
             {TEMPLATES.map((tmpl) => (
               <TemplateCardUI
                 key={tmpl.id}

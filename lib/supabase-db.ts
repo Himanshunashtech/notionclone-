@@ -1,5 +1,65 @@
 import { supabase } from "./supabase";
 
+const REDIS_URL = "https://ultimate-wahoo-117639.upstash.io";
+const REDIS_TOKEN = "gQAAAAAAAcuHAAIgcDEyY2MzYzljZjAwYTc0NjFhOTNlZmVlODcwY2RhZGI5Ng";
+
+const redisCommand = async (command: any[]) => {
+  try {
+    const res = await fetch(`${REDIS_URL}`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${REDIS_TOKEN}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(command),
+    });
+    if (!res.ok) {
+      return null;
+    }
+    const data = await res.json();
+    return data.result;
+  } catch (err) {
+    console.error("Redis command error:", err);
+    return null;
+  }
+};
+
+const getCache = async (userId: string, queryKey: string, args: any) => {
+  if (!userId) return null;
+  try {
+    const version = await redisCommand(["GET", `zotion:version:${userId}`]) || "1";
+    const cacheKey = `zotion:v${version}:user:${userId}:query:${queryKey}:${JSON.stringify(args || {})}`;
+    const cached = await redisCommand(["GET", cacheKey]);
+    if (cached) {
+      return JSON.parse(cached);
+    }
+  } catch (err) {
+    console.error("Redis getCache error:", err);
+  }
+  return null;
+};
+
+const setCache = async (userId: string, queryKey: string, args: any, data: any) => {
+  if (!userId) return;
+  try {
+    const version = await redisCommand(["GET", `zotion:version:${userId}`]) || "1";
+    const cacheKey = `zotion:v${version}:user:${userId}:query:${queryKey}:${JSON.stringify(args || {})}`;
+    // Cache for 24 hours (86400 seconds)
+    await redisCommand(["SET", cacheKey, JSON.stringify(data), "EX", "86400"]);
+  } catch (err) {
+    console.error("Redis setCache error:", err);
+  }
+};
+
+const invalidateCache = async (userId: string) => {
+  if (!userId) return;
+  try {
+    await redisCommand(["INCR", `zotion:version:${userId}`]);
+  } catch (err) {
+    console.error("Redis invalidateCache error:", err);
+  }
+};
+
 export interface DocumentRow {
   _id: string;
   _creationTime: number;
@@ -101,6 +161,7 @@ export const api = {
     restore: "restore" as const,
     remove: "remove" as const,
     getSearch: "getSearch" as const,
+    searchDocuments: "searchDocuments" as const,
     getById: "getById" as const,
     removeIcon: "removeIcon" as const,
     removeCoverImage: "removeCoverImage" as const,
@@ -131,18 +192,38 @@ export const api = {
 // Custom type definitions for the api object
 export type ApiType = typeof api;
 
-export const dbQueries = {
-  getSidebar: async (userId: string, args: { parentDocument?: string }) => {
+const rawDbQueries = {
+  getSidebar: async (userId: string | null, args: { parentDocument?: string }) => {
+    let isParentPublished = false;
+    if (args.parentDocument) {
+      const { data: parentData } = await supabase
+        .from("documents")
+        .select("is_published, user_id")
+        .eq("id", args.parentDocument)
+        .single();
+      
+      if (parentData && parentData.is_published) {
+        isParentPublished = true;
+      }
+    }
+
     let query = supabase
       .from("documents")
       .select("*")
-      .eq("user_id", userId)
       .eq("is_archived", false);
 
-    if (args.parentDocument) {
+    if (isParentPublished && args.parentDocument) {
       query = query.eq("parent_document", args.parentDocument);
     } else {
-      query = query.is("parent_document", null);
+      if (!userId) {
+        return [];
+      }
+      query = query.eq("user_id", userId);
+      if (args.parentDocument) {
+        query = query.eq("parent_document", args.parentDocument);
+      } else {
+        query = query.is("parent_document", null);
+      }
     }
 
     const { data, error } = await query;
@@ -198,7 +279,23 @@ export const dbQueries = {
 
     const document = mapDocument(data);
 
-    if (document.isPublished && !document.isArchived) {
+    const isPubliclyAccessible = await (async () => {
+      if (data.is_published && !data.is_archived) return true;
+      let current = data;
+      while (current.parent_document) {
+        const { data: parent } = await supabase
+          .from("documents")
+          .select("is_published, parent_document, is_archived")
+          .eq("id", current.parent_document)
+          .single();
+        if (!parent || parent.is_archived) break;
+        if (parent.is_published) return true;
+        current = parent;
+      }
+      return false;
+    })();
+
+    if (isPubliclyAccessible && !document.isArchived) {
       return document;
     }
 
@@ -274,10 +371,21 @@ export const dbQueries = {
 
     if (error) throw error;
     return (data || []).map(mapCalendarEvent);
+  },
+
+  searchDocuments: async (userId: string, args: { query: string }) => {
+    if (!args.query) return [];
+    const { data, error } = await supabase
+      .from("documents")
+      .select("*")
+      .eq("user_id", userId)
+      .eq("is_archived", false)
+      .ilike("title", `%${args.query}%`);
+    if (error) throw error;
+    return (data || []).map(mapDocument);
   }
 };
-
-export const dbMutations = {
+const rawDbMutations = {
   create: async (userId: string, args: { title: string; parentDocument?: string }) => {
     const { data, error } = await supabase
       .from("documents")
@@ -433,6 +541,7 @@ export const dbMutations = {
     fullWidth?: boolean;
     smallText?: boolean;
     showToc?: boolean;
+    parentDocument?: string | null;
   }) => {
     const { data: doc, error: getError } = await supabase
       .from("documents")
@@ -470,6 +579,10 @@ export const dbMutations = {
     if (rest.showToc !== undefined) {
       updateObj.show_toc = rest.showToc;
       delete updateObj.showToc;
+    }
+    if (rest.parentDocument !== undefined) {
+      updateObj.parent_document = rest.parentDocument;
+      delete updateObj.parentDocument;
     }
 
     const { data, error } = await supabase
@@ -872,6 +985,49 @@ export const dbMutations = {
     return data.id;
   }
 };
+
+const cacheScopedQueries = ["getSidebar", "getFavorites"];
+
+const wrapQueries = () => {
+  const wrapped: any = {};
+  for (const [key, fn] of Object.entries(rawDbQueries)) {
+    if (cacheScopedQueries.includes(key)) {
+      wrapped[key] = async (userId: string, args: any) => {
+        if (!userId) return await (fn as any)(userId, args);
+        const cached = await getCache(userId, key, args);
+        if (cached !== null) {
+          console.log(`[Cache Hit] ${key}`, args);
+          return cached;
+        }
+        console.log(`[Cache Miss] Fetching database for ${key}`, args);
+        const data = await (fn as any)(userId, args);
+        await setCache(userId, key, args, data);
+        return data;
+      };
+    } else {
+      wrapped[key] = fn;
+    }
+  }
+  return wrapped;
+};
+
+const wrapMutations = () => {
+  const wrapped: any = {};
+  for (const [key, fn] of Object.entries(rawDbMutations)) {
+    wrapped[key] = async (userId: string, args: any) => {
+      const result = await (fn as any)(userId, args);
+      if (userId) {
+        console.log(`[Cache Invalidation] Triggered by ${key}`);
+        await invalidateCache(userId);
+      }
+      return result;
+    };
+  }
+  return wrapped;
+};
+
+export const dbQueries = wrapQueries() as typeof rawDbQueries;
+export const dbMutations = wrapMutations() as typeof rawDbMutations;
 
 export type Doc<T extends "documents" | "userSettings"> = T extends "documents" ? DocumentRow : UserSettingsRow;
 export type Id<T extends "documents" | "userSettings"> = string;

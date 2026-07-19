@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useMemo, use, useState, useEffect } from "react";
+import React, { useMemo, use, useState, useEffect } from "react";
 import { useTheme } from "next-themes";
 
 import { Cover } from "@/components/cover";
@@ -23,15 +23,103 @@ import { TemplatesMenu } from "@/components/database/TemplatesMenu";
 import { HistorySidebar } from "@/components/modals/HistorySidebar";
 import { MeetingTranscription } from "@/components/meeting-transcription";
 import { useRef } from "react";
-import { FileText, CheckSquare2, CalendarDays, BookOpen, Calendar, ArrowUpRight, ListFilter, User, MessageSquare, Plus } from "lucide-react";
+import {
+  FileText,
+  CheckSquare2,
+  CalendarDays,
+  BookOpen,
+  Calendar,
+  ArrowUpRight,
+  ListFilter,
+  User,
+  MessageSquare,
+  Plus,
+  Type,
+  Hash,
+  CircleDot,
+  Tags,
+  Paperclip,
+  Link as LinkIcon,
+  Mail,
+  Phone,
+  Sigma,
+  Search,
+  Clock,
+  UserCircle,
+  Play,
+  MapPin,
+  HelpCircle,
+  Eye,
+  EyeOff,
+  Copy,
+  Trash2,
+  Edit,
+  SlidersHorizontal
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useUser } from "@/components/providers/supabase-provider";
+import { toast } from "sonner";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuSubContent,
+  DropdownMenuPortal,
 } from "@/components/ui/dropdown-menu";
+
+const PROPERTY_TYPES_LIST = [
+  { label: "Text", type: "text", icon: Type },
+  { label: "Number", type: "number", icon: Hash },
+  { label: "Select", type: "select", icon: CircleDot },
+  { label: "Multi-select", type: "multiselect", icon: Tags },
+  { label: "Status", type: "select", icon: ListFilter, options: ["To Do", "In Progress", "Done"] },
+  { label: "Date", type: "date", icon: CalendarDays },
+  { label: "Person", type: "text", icon: User },
+  { label: "Files & media", type: "text", icon: Paperclip },
+  { label: "Checkbox", type: "checkbox", icon: CheckSquare2 },
+  { label: "URL", type: "url", icon: LinkIcon },
+  { label: "Email", type: "email", icon: Mail },
+  { label: "Phone", type: "phone", icon: Phone },
+  { label: "Formula", type: "text", icon: Sigma },
+  { label: "Relation", type: "relation", icon: ArrowUpRight },
+  { label: "Rollup", type: "text", icon: Search },
+  { label: "Created time", type: "text", icon: Clock },
+  { label: "Created by", type: "text", icon: UserCircle },
+  { label: "Last edited time", type: "text", icon: Clock },
+  { label: "Last edited by", type: "text", icon: UserCircle },
+  { label: "Button", type: "text", icon: Play },
+  { label: "Place", type: "text", icon: MapPin },
+  { label: "ID", type: "text", icon: Hash }
+];
+
+const PROPERTY_ICONS: Record<string, any> = {
+  text: Type,
+  number: Hash,
+  select: CircleDot,
+  multiselect: Tags,
+  status: ListFilter,
+  date: CalendarDays,
+  person: User,
+  "files & media": Paperclip,
+  checkbox: CheckSquare2,
+  url: LinkIcon,
+  email: Mail,
+  phone: Phone,
+  formula: Sigma,
+  relation: ArrowUpRight,
+  rollup: Search,
+  "created time": Clock,
+  "created by": UserCircle,
+  "last edited time": Clock,
+  "last edited by": UserCircle,
+  button: Play,
+  place: MapPin,
+  id: Hash,
+};
 
 interface DocumentIdPageProps {
   params:
@@ -51,6 +139,7 @@ const DocumentIdPage = ({ params }: DocumentIdPageProps) => {
   const { documentId } = resolvedParams;
   const [editor, setEditor] = useState<BlockNoteEditor | null>(null);
   const [projectTab, setProjectTab] = useState<"content" | "tasks" | "meetings" | "docs" | any>("content");
+  const [showHiddenProperties, setShowHiddenProperties] = useState(false);
   const { resolvedTheme } = useTheme();
   const { user } = useUser();
   
@@ -254,6 +343,161 @@ const DocumentIdPage = ({ params }: DocumentIdPageProps) => {
     });
   };
 
+  const handleAddPageProperty = async (propName: string, propType: string, options?: string[]) => {
+    if (!parentDoc) return;
+    const propId = propName.toLowerCase().replace(/\s+/g, "_").trim();
+    if (!propId) return;
+    const parentConfig = parseDatabaseConfig(parentDoc.content);
+
+    if (parentConfig.properties.some((p) => p.id === propId)) {
+      toast.error("A property with that name already exists");
+      return;
+    }
+
+    const newProp = {
+      id: propId,
+      name: propName,
+      type: propType as any,
+      options: options,
+      displayType: propType === "select" && options?.length === 3 && options.includes("To Do") ? "Status" : undefined
+    };
+
+    const newConfig = {
+      ...parentConfig,
+      properties: [...parentConfig.properties, newProp]
+    };
+
+    const promise = update({
+      id: parentDoc._id,
+      content: JSON.stringify(newConfig, null, 2),
+    });
+
+    toast.promise(promise, {
+      loading: `Adding "${propName}" property...`,
+      success: `Property "${propName}" added!`,
+      error: "Failed to add property.",
+    });
+  };
+
+  const handleRenamePageProperty = async (propId: string, newName: string) => {
+    if (!parentDoc) return;
+    const parentConfig = parseDatabaseConfig(parentDoc.content);
+    const updatedProps = parentConfig.properties.map((p) => {
+      if (p.id === propId) {
+        return { ...p, name: newName };
+      }
+      return p;
+    });
+
+    const promise = update({
+      id: parentDoc._id,
+      content: JSON.stringify({ ...parentConfig, properties: updatedProps }, null, 2),
+    });
+
+    toast.promise(promise, {
+      loading: "Renaming property...",
+      success: "Property renamed successfully!",
+      error: "Failed to rename property."
+    });
+  };
+
+  const handleEditPageProperty = async (propId: string, newType: string, options?: string[]) => {
+    if (!parentDoc) return;
+    const parentConfig = parseDatabaseConfig(parentDoc.content);
+    const updatedProps = parentConfig.properties.map((p) => {
+      if (p.id === propId) {
+        return {
+          ...p,
+          type: newType as any,
+          options: options,
+          displayType: newType === "select" && options?.length === 3 && options.includes("To Do") ? "Status" : undefined
+        };
+      }
+      return p;
+    });
+
+    const promise = update({
+      id: parentDoc._id,
+      content: JSON.stringify({ ...parentConfig, properties: updatedProps }, null, 2),
+    });
+
+    toast.promise(promise, {
+      loading: "Updating property type...",
+      success: "Property type updated!",
+      error: "Failed to update property."
+    });
+  };
+
+  const handleDuplicatePageProperty = async (propId: string) => {
+    if (!parentDoc) return;
+    const parentConfig = parseDatabaseConfig(parentDoc.content);
+    const original = parentConfig.properties.find((p) => p.id === propId);
+    if (!original) return;
+
+    const newId = `${original.id}_copy_${Math.random().toString(36).substring(2, 6)}`;
+    const newProp = {
+      ...original,
+      id: newId,
+      name: `${original.name} (Copy)`
+    };
+
+    const promise = update({
+      id: parentDoc._id,
+      content: JSON.stringify({
+        ...parentConfig,
+        properties: [...parentConfig.properties, newProp]
+      }, null, 2),
+    });
+
+    toast.promise(promise, {
+      loading: "Duplicating property...",
+      success: "Property duplicated!",
+      error: "Failed to duplicate property."
+    });
+  };
+
+  const handleDeletePageProperty = async (propId: string) => {
+    if (!parentDoc) return;
+    const ok = window.confirm("Are you sure you want to delete this property from all pages in this database?");
+    if (!ok) return;
+
+    const parentConfig = parseDatabaseConfig(parentDoc.content);
+    const updatedProps = parentConfig.properties.filter((p) => p.id !== propId);
+
+    const promise = update({
+      id: parentDoc._id,
+      content: JSON.stringify({ ...parentConfig, properties: updatedProps }, null, 2),
+    });
+
+    toast.promise(promise, {
+      loading: "Deleting property...",
+      success: "Property deleted!",
+      error: "Failed to delete property."
+    });
+  };
+
+  const handleSetPagePropertyVisibility = async (propId: string, visibility: "always-show" | "hide-empty" | "always-hide") => {
+    if (!parentDoc) return;
+    const parentConfig = parseDatabaseConfig(parentDoc.content);
+    const updatedProps = parentConfig.properties.map((p) => {
+      if (p.id === propId) {
+        return { ...p, visibility } as any;
+      }
+      return p;
+    });
+
+    const promise = update({
+      id: parentDoc._id,
+      content: JSON.stringify({ ...parentConfig, properties: updatedProps }, null, 2),
+    });
+
+    toast.promise(promise, {
+      loading: "Updating property visibility...",
+      success: "Property visibility updated!",
+      error: "Failed to update visibility."
+    });
+  };
+
   const comments = rowData.comments || [];
 
   const handleAddComment = async (text: string) => {
@@ -319,72 +563,242 @@ const DocumentIdPage = ({ params }: DocumentIdPageProps) => {
               )}
               {/* Properties list */}
               <div className="space-y-4">
-              {parseDatabaseConfig(parentDoc.content).properties.map((p) => {
-                const val = rowData.values[p.id] || "";
-                let PropIcon = Calendar;
-                if (p.id === "status" || p.name.toLowerCase() === "status") {
-                  PropIcon = ListFilter;
-                } else if (p.type === "relation") {
-                  PropIcon = ArrowUpRight;
-                } else if (p.id === "assignee" || p.name.toLowerCase() === "assignee" || p.id === "attendees" || p.name.toLowerCase() === "attendees") {
-                  PropIcon = User;
-                }
+                {(() => {
+                  const allProps = parseDatabaseConfig(parentDoc.content).properties;
+                  const visibleProps = allProps.filter((p) => {
+                    const val = rowData.values[p.id] || "";
+                    const visibility = (p as any).visibility;
+                    if (showHiddenProperties) return true;
+                    if (visibility === "always-hide") return false;
+                    if (visibility === "hide-empty" && !val) return false;
+                    return true;
+                  });
+                  const hiddenCount = allProps.length - visibleProps.length;
 
-                return (
-                  <div key={p.id} className="grid grid-cols-3 gap-x-4 items-center text-sm">
-                    <div className="flex items-center gap-x-2 text-muted-foreground select-none">
-                      <PropIcon className="h-4 w-4 shrink-0" />
-                      <span>{p.name}</span>
-                    </div>
-                    <div className="col-span-2">
-                      {p.type === "select" ? (
-                        <DropdownMenu>
-                          <DropdownMenuTrigger className="px-2 py-1 rounded-md text-xs font-semibold bg-neutral-100 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 border border-neutral-200 dark:border-neutral-700 hover:opacity-85 transition">
-                            {val || "Empty"}
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="start" className="dark:bg-neutral-900">
-                            {(p.options || []).map((opt) => (
-                              <DropdownMenuItem
-                                key={opt}
-                                onClick={() => handleUpdateProperty(p.id, opt)}
-                                className="text-xs cursor-pointer"
-                              >
-                                {opt}
-                              </DropdownMenuItem>
-                            ))}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      ) : p.type === "date" ? (
-                        <input
-                          type="date"
-                          value={val}
-                          onChange={(e) => handleUpdateProperty(p.id, e.target.value)}
-                          className="px-2 py-1 text-xs rounded-md bg-transparent border border-neutral-205 dark:border-neutral-750 focus:ring-1 focus:ring-blue-500 outline-hidden dark:text-neutral-200"
-                        />
-                      ) : p.type === "relation" ? (
-                        <div className="text-xs text-neutral-700 dark:text-neutral-300">
-                          {val ? (
-                            <span className="px-2 py-1 rounded-md bg-neutral-100 dark:bg-neutral-850 font-medium">
-                              {rootDocs?.find((d) => d._id === val)?.title || val}
-                            </span>
-                          ) : (
-                            <span className="text-neutral-400">Empty</span>
-                          )}
+                  return (
+                    <>
+                      {visibleProps.map((p) => {
+                        const val = rowData.values[p.id] || "";
+                        let PropIcon = Calendar;
+                        const displayType = (p as any).displayType || p.type || "";
+                        if (PROPERTY_ICONS[displayType.toLowerCase()]) {
+                          PropIcon = PROPERTY_ICONS[displayType.toLowerCase()];
+                        } else if (p.id === "status" || p.name.toLowerCase() === "status") {
+                          PropIcon = ListFilter;
+                        } else if (p.type === "relation") {
+                          PropIcon = ArrowUpRight;
+                        } else if (p.id === "assignee" || p.name.toLowerCase() === "assignee" || p.id === "attendees" || p.name.toLowerCase() === "attendees") {
+                          PropIcon = User;
+                        }
+
+                        return (
+                          <div key={p.id} className="grid grid-cols-3 gap-x-4 items-center text-sm">
+                            <div className="flex items-center gap-x-2 text-muted-foreground select-none">
+                              <DropdownMenu>
+                                <DropdownMenuTrigger className="flex items-center gap-x-2 text-muted-foreground select-none hover:bg-neutral-100 dark:hover:bg-neutral-800/60 px-1.5 py-0.5 rounded-md transition cursor-pointer text-left w-full outline-hidden font-medium">
+                                  <PropIcon className="h-4 w-4 shrink-0 text-neutral-500" />
+                                  <span className="truncate">{p.name}</span>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="start" className="w-52 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-neutral-800 dark:text-neutral-200">
+                                  <DropdownMenuItem
+                                    onClick={() => {
+                                      const newName = window.prompt("Rename property:", p.name);
+                                      if (newName && newName.trim()) {
+                                        handleRenamePageProperty(p.id, newName);
+                                      }
+                                    }}
+                                    className="flex items-center gap-x-2 text-xs cursor-pointer"
+                                  >
+                                    <Edit className="h-3.5 w-3.5" />
+                                    <span>Rename</span>
+                                  </DropdownMenuItem>
+
+                                  <DropdownMenuSub>
+                                    <DropdownMenuSubTrigger className="flex items-center gap-x-2 text-xs cursor-pointer">
+                                      <SlidersHorizontal className="h-3.5 w-3.5" />
+                                      <span>Edit property</span>
+                                    </DropdownMenuSubTrigger>
+                                    <DropdownMenuPortal>
+                                      <DropdownMenuSubContent className="w-48 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-neutral-800 dark:text-neutral-200 max-h-56 overflow-y-auto custom-scrollbar">
+                                        {PROPERTY_TYPES_LIST.map((item) => (
+                                          <DropdownMenuItem
+                                            key={item.label}
+                                            onClick={() => handleEditPageProperty(p.id, item.type, item.options)}
+                                            className="flex items-center gap-x-2 text-xs cursor-pointer"
+                                          >
+                                            {React.createElement(item.icon, { className: "h-3.5 w-3.5 text-neutral-400 shrink-0" })}
+                                            <span>{item.label}</span>
+                                          </DropdownMenuItem>
+                                        ))}
+                                      </DropdownMenuSubContent>
+                                    </DropdownMenuPortal>
+                                  </DropdownMenuSub>
+
+                                  <DropdownMenuSeparator />
+
+                                  <DropdownMenuSub>
+                                    <DropdownMenuSubTrigger className="flex items-center gap-x-2 text-xs cursor-pointer">
+                                      <Eye className="h-3.5 w-3.5" />
+                                      <span>Property visibility</span>
+                                    </DropdownMenuSubTrigger>
+                                    <DropdownMenuPortal>
+                                      <DropdownMenuSubContent className="w-48 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-neutral-800 dark:text-neutral-200">
+                                        <DropdownMenuItem
+                                          onClick={() => handleSetPagePropertyVisibility(p.id, "always-show")}
+                                          className="flex items-center justify-between text-xs cursor-pointer"
+                                        >
+                                          <span>Always show</span>
+                                          {(p as any).visibility === "always-show" || !(p as any).visibility ? <span className="text-xs text-blue-500">✓</span> : null}
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem
+                                          onClick={() => handleSetPagePropertyVisibility(p.id, "hide-empty")}
+                                          className="flex items-center justify-between text-xs cursor-pointer"
+                                        >
+                                          <span>Hide when empty</span>
+                                          {(p as any).visibility === "hide-empty" ? <span className="text-xs text-blue-500">✓</span> : null}
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem
+                                          onClick={() => handleSetPagePropertyVisibility(p.id, "always-hide")}
+                                          className="flex items-center justify-between text-xs cursor-pointer"
+                                        >
+                                          <span>Always hide</span>
+                                          {(p as any).visibility === "always-hide" ? <span className="text-xs text-blue-500">✓</span> : null}
+                                        </DropdownMenuItem>
+                                      </DropdownMenuSubContent>
+                                    </DropdownMenuPortal>
+                                  </DropdownMenuSub>
+
+                                  <DropdownMenuItem
+                                    onClick={() => handleDuplicatePageProperty(p.id)}
+                                    className="flex items-center gap-x-2 text-xs cursor-pointer"
+                                  >
+                                    <Copy className="h-3.5 w-3.5" />
+                                    <span>Duplicate property</span>
+                                  </DropdownMenuItem>
+
+                                  <DropdownMenuItem
+                                    onClick={() => handleDeletePageProperty(p.id)}
+                                    className="flex items-center gap-x-2 text-xs cursor-pointer text-rose-500 hover:text-rose-500 dark:hover:text-rose-400! focus:bg-rose-500/10"
+                                  >
+                                    <Trash2 className="h-3.5 w-3.5 text-rose-500" />
+                                    <span>Delete property</span>
+                                  </DropdownMenuItem>
+
+                                  <DropdownMenuSeparator />
+
+                                  <DropdownMenuItem
+                                    onClick={() => toast.info(`Layout configuration for "${p.name}"`)}
+                                    className="flex items-center gap-x-2 text-xs cursor-pointer"
+                                  >
+                                    <SlidersHorizontal className="h-3.5 w-3.5" />
+                                    <span>Customize layout</span>
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </div>
+                            <div className="col-span-2">
+                              {p.type === "select" ? (
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger className="px-2 py-1 rounded-md text-xs font-semibold bg-neutral-100 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 border border-neutral-200 dark:border-neutral-700 hover:opacity-85 transition">
+                                    {val || "Empty"}
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="start" className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-neutral-800 dark:text-neutral-200">
+                                    {(p.options || []).map((opt) => (
+                                      <DropdownMenuItem
+                                        key={opt}
+                                        onClick={() => handleUpdateProperty(p.id, opt)}
+                                        className="text-xs cursor-pointer"
+                                      >
+                                        {opt}
+                                      </DropdownMenuItem>
+                                    ))}
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                              ) : p.type === "date" ? (
+                                <input
+                                  type="date"
+                                  value={val}
+                                  onChange={(e) => handleUpdateProperty(p.id, e.target.value)}
+                                  className="px-2 py-1 text-xs rounded-md bg-transparent border border-neutral-205 dark:border-neutral-750 focus:ring-1 focus:ring-blue-500 outline-hidden dark:text-neutral-200"
+                                />
+                              ) : p.type === "relation" ? (
+                                <div className="text-xs text-neutral-700 dark:text-neutral-300">
+                                  {val ? (
+                                    <span className="px-2 py-1 rounded-md bg-neutral-100 dark:bg-neutral-850 font-medium">
+                                      {rootDocs?.find((d) => d._id === val)?.title || val}
+                                    </span>
+                                  ) : (
+                                    <span className="text-neutral-400">Empty</span>
+                                  )}
+                                </div>
+                              ) : p.type === "checkbox" ? (
+                                <input
+                                  type="checkbox"
+                                  checked={val === "true"}
+                                  onChange={(e) => handleUpdateProperty(p.id, e.target.checked ? "true" : "false")}
+                                  className="h-4 w-4 rounded-sm border border-neutral-205 dark:border-neutral-750 text-blue-600 focus:ring-1 focus:ring-blue-500 cursor-pointer"
+                                />
+                              ) : (
+                                <input
+                                  type="text"
+                                  value={val}
+                                  onChange={(e) => handleUpdateProperty(p.id, e.target.value)}
+                                  placeholder="Empty"
+                                  className="w-full px-2 py-1 text-xs rounded-md bg-transparent border border-transparent hover:border-neutral-200 dark:hover:border-neutral-750 focus:border-neutral-200 dark:focus:border-neutral-750 focus:ring-1 focus:ring-blue-500 outline-hidden dark:text-neutral-200"
+                                />
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+
+                      {hiddenCount > 0 && (
+                        <div className="pt-1">
+                          <button
+                            onClick={() => setShowHiddenProperties(!showHiddenProperties)}
+                            className="text-xs text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300 transition py-1 font-medium flex items-center gap-x-1 cursor-pointer"
+                          >
+                            {showHiddenProperties ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
+                            <span>{showHiddenProperties ? "Hide extra properties" : `Show ${hiddenCount} more properties`}</span>
+                          </button>
                         </div>
-                      ) : (
-                        <input
-                          type="text"
-                          value={val}
-                          onChange={(e) => handleUpdateProperty(p.id, e.target.value)}
-                          placeholder="Empty"
-                          className="w-full px-2 py-1 text-xs rounded-md bg-transparent border border-transparent hover:border-neutral-200 dark:hover:border-neutral-750 focus:border-neutral-200 dark:focus:border-neutral-750 focus:ring-1 focus:ring-blue-500 outline-hidden dark:text-neutral-200"
-                        />
                       )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+                    </>
+                  );
+                })()}
+
+                {/* Add Property Button & Dropdown */}
+                <div className="pt-2">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button className="flex items-center gap-x-2 px-2 py-1 text-xs text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800/60 rounded-md transition font-medium w-fit cursor-pointer">
+                        <Plus className="h-3.5 w-3.5" />
+                        <span>Add property</span>
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start" className="w-52 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-neutral-800 dark:text-neutral-200 max-h-60 overflow-y-auto custom-scrollbar">
+                      {PROPERTY_TYPES_LIST.map((item) => {
+                        const ItemIcon = item.icon;
+                        return (
+                          <DropdownMenuItem
+                            key={item.label}
+                            onClick={() => {
+                              const name = window.prompt(`Enter name for the new ${item.label} property:`);
+                              if (name && name.trim()) {
+                                handleAddPageProperty(name, item.type, item.options);
+                              }
+                            }}
+                            className="flex items-center gap-x-2 text-xs py-1.5 cursor-pointer"
+                          >
+                            <ItemIcon className="h-3.5 w-3.5 text-neutral-400 shrink-0" />
+                            <span>{item.label}</span>
+                          </DropdownMenuItem>
+                        );
+                      })}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              </div>
 
             {/* Comments List */}
             <div className="pt-4 border-t border-neutral-200 dark:border-neutral-800 space-y-4">

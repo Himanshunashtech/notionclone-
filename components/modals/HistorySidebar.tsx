@@ -93,7 +93,7 @@ export const HistorySidebar = () => {
   };
 
   return (
-    <div className="fixed inset-y-0 right-0 z-50 w-full max-w-[450px] bg-white/85 dark:bg-neutral-900/90 backdrop-blur-md border-l border-neutral-200 dark:border-neutral-800 shadow-2xl flex flex-col transition-all duration-300 transform translate-x-0">
+    <div className="fixed inset-y-0 right-0 z-[999999] w-full max-w-[450px] bg-white/85 dark:bg-neutral-900/90 backdrop-blur-md border-l border-neutral-200 dark:border-neutral-800 shadow-2xl flex flex-col transition-all duration-300 transform translate-x-0">
       
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-neutral-200 dark:border-neutral-800">
@@ -163,6 +163,24 @@ export const HistorySidebar = () => {
                     return Object.entries(parsed.values || {})
                       .map(([k, v]) => `• ${k}: ${v}`)
                       .join("\n");
+                  }
+                  if (Array.isArray(parsed)) {
+                    const extractText = (nodes: any[]): string => {
+                      return nodes
+                        .map((node) => {
+                          let text = "";
+                          if (node.content && Array.isArray(node.content)) {
+                            text += node.content.map((c: any) => c.text || "").join("");
+                          }
+                          if (node.children && Array.isArray(node.children)) {
+                            text += "\n" + extractText(node.children);
+                          }
+                          return text;
+                        })
+                        .filter(Boolean)
+                        .join("\n");
+                    };
+                    return extractText(parsed) || <span className="italic text-muted-foreground">Empty document</span>;
                   }
                 } catch {}
                 

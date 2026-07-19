@@ -76,8 +76,8 @@ export const DatabaseView = ({
   const [filterVal, setFilterVal] = useState<string>("");
 
   const handleViewChange = async (viewType: ViewType) => {
-    if (preview) return;
     setActiveTab(viewType);
+    if (preview) return;
     const currentViews = config.views || ["table", "board", "chart"];
     const newConfig = {
       ...config,
@@ -294,46 +294,102 @@ export const DatabaseView = ({
       <div className="flex items-center justify-between border-b border-neutral-200 dark:border-neutral-800">
         {/* Left: view tabs */}
         <div className="flex items-center gap-x-0">
-          {visibleTabs.map(({ key, label, Icon }) => (
-            <button
-              key={key}
-              onClick={() => handleViewChange(key)}
-              className={`relative flex items-center gap-x-1.5 px-3 py-2.5 text-xs font-semibold transition-colors select-none
-                ${activeTab === key
-                  ? "text-neutral-900 dark:text-white"
-                  : "text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200"
-                }`}
-            >
-              <Icon className="h-3.5 w-3.5" />
-              <span>{label}</span>
-              {activeTab === key && (
-                <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-neutral-900 dark:bg-white rounded-t-full" />
-              )}
-            </button>
-          ))}
-
-          {!preview && (
+          {/* Mobile view dropdown selector */}
+          <div className="flex md:hidden items-center">
             <DropdownMenu>
-              <DropdownMenuTrigger className="flex items-center gap-x-1 px-2 py-2.5 text-xs text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300 transition">
-                <Plus className="h-3.5 w-3.5" />
+              <DropdownMenuTrigger className="flex items-center gap-x-1.5 px-3 py-2 text-xs font-semibold text-neutral-900 dark:text-white outline-hidden">
+                {(() => {
+                  const activeTabItem = visibleTabs.find((t) => t.key === activeTab);
+                  if (activeTabItem) {
+                    const ActiveIcon = activeTabItem.Icon;
+                    return (
+                      <>
+                        <ActiveIcon className="h-3.5 w-3.5" />
+                        <span>{activeTabItem.label}</span>
+                      </>
+                    );
+                  }
+                  return <span>Views</span>;
+                })()}
+                <ChevronDown className="h-3 w-3 text-neutral-450 ml-0.5" />
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start" className="dark:bg-neutral-900">
-                <DropdownMenuLabel className="text-[10px]">Add database view</DropdownMenuLabel>
-                {tabs
-                  .filter((tab) => !enabledViews.includes(tab.key))
-                  .map((tab) => (
-                    <DropdownMenuItem
-                      key={tab.key}
-                      onClick={() => handleAddView(tab.key)}
-                      className="text-xs cursor-pointer"
-                    >
-                      <tab.Icon className="h-3.5 w-3.5 mr-2" />
-                      <span>{tab.label} View</span>
-                    </DropdownMenuItem>
-                  ))}
+                <DropdownMenuLabel className="text-[10px]">Select View</DropdownMenuLabel>
+                {visibleTabs.map(({ key, label, Icon }) => (
+                  <DropdownMenuItem
+                    key={key}
+                    onClick={() => handleViewChange(key)}
+                    className={`text-xs cursor-pointer flex items-center gap-x-2 ${activeTab === key ? "bg-neutral-150 dark:bg-neutral-800 font-bold" : ""}`}
+                  >
+                    <Icon className="h-3.5 w-3.5 text-neutral-500" />
+                    <span>{label}</span>
+                  </DropdownMenuItem>
+                ))}
+                {!preview && tabs.filter((tab) => !enabledViews.includes(tab.key)).length > 0 && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuLabel className="text-[10px]">Add View</DropdownMenuLabel>
+                    {tabs
+                      .filter((tab) => !enabledViews.includes(tab.key))
+                      .map((tab) => (
+                        <DropdownMenuItem
+                          key={tab.key}
+                          onClick={() => handleAddView(tab.key)}
+                          className="text-xs cursor-pointer flex items-center gap-x-2"
+                        >
+                          <tab.Icon className="h-3.5 w-3.5 text-neutral-450" />
+                          <span>{tab.label} View</span>
+                        </DropdownMenuItem>
+                      ))}
+                  </>
+                )}
               </DropdownMenuContent>
             </DropdownMenu>
-          )}
+          </div>
+
+          {/* Desktop view tabs */}
+          <div className="hidden md:flex items-center gap-x-0">
+            {visibleTabs.map(({ key, label, Icon }) => (
+              <button
+                key={key}
+                onClick={() => handleViewChange(key)}
+                className={`relative flex items-center gap-x-1.5 px-3 py-2.5 text-xs font-semibold transition-colors select-none
+                  ${activeTab === key
+                    ? "text-neutral-900 dark:text-white"
+                    : "text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200"
+                  }`}
+              >
+                <Icon className="h-3.5 w-3.5" />
+                <span>{label}</span>
+                {activeTab === key && (
+                  <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-neutral-900 dark:bg-white rounded-t-full" />
+                )}
+              </button>
+            ))}
+
+            {!preview && (
+              <DropdownMenu>
+                <DropdownMenuTrigger className="flex items-center gap-x-1 px-2 py-2.5 text-xs text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300 transition">
+                  <Plus className="h-3.5 w-3.5" />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="dark:bg-neutral-900">
+                  <DropdownMenuLabel className="text-[10px]">Add database view</DropdownMenuLabel>
+                  {tabs
+                    .filter((tab) => !enabledViews.includes(tab.key))
+                    .map((tab) => (
+                      <DropdownMenuItem
+                        key={tab.key}
+                        onClick={() => handleAddView(tab.key)}
+                        className="text-xs cursor-pointer"
+                      >
+                        <tab.Icon className="h-3.5 w-3.5 mr-2" />
+                        <span>{tab.label} View</span>
+                      </DropdownMenuItem>
+                    ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+          </div>
         </div>
 
         {/* Right: action icons + New button */}
@@ -364,14 +420,16 @@ export const DatabaseView = ({
             <ListFilter className="h-3.5 w-3.5" />
           </button>
 
-          {/* AI Autofill Button */}
-          <button
-            onClick={handleAIFill}
-            title="Zotion AI Autofill"
-            className="p-1.5 text-neutral-400 hover:text-amber-500 dark:hover:text-amber-400 hover:bg-amber-50 dark:hover:bg-neutral-800 rounded-md transition"
-          >
-            <Zap className="h-3.5 w-3.5 text-amber-500 animate-pulse" />
-          </button>
+           {/* AI Autofill Button */}
+          {!preview && (
+            <button
+              onClick={handleAIFill}
+              title="Zotion AI Autofill"
+              className="p-1.5 text-neutral-400 hover:text-amber-500 dark:hover:text-amber-400 hover:bg-amber-50 dark:hover:bg-neutral-800 rounded-md transition"
+            >
+              <Zap className="h-3.5 w-3.5 text-amber-500 animate-pulse" />
+            </button>
+          )}
 
           {/* Search Button */}
           <button
@@ -411,10 +469,14 @@ export const DatabaseView = ({
               <DropdownMenuItem onClick={() => handleViewChange("chart")} className="text-xs cursor-pointer">
                 Switch to Chart view
               </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={handleAddRow} className="text-xs cursor-pointer">
-                Add new record
-              </DropdownMenuItem>
+              {!preview && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={handleAddRow} className="text-xs cursor-pointer">
+                    Add new record
+                  </DropdownMenuItem>
+                </>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
 

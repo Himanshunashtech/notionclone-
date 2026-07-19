@@ -4,6 +4,8 @@ import React, { useState, useMemo, useEffect } from "react";
 import { useTheme } from "next-themes";
 import { useQuery, useMutation } from "@/hooks/use-supabase-db";
 import { api } from "@/lib/supabase-db";
+import { useMediaQuery } from "usehooks-ts";
+import { cn } from "@/lib/utils";
 import { 
   ChevronLeft, 
   ChevronRight, 
@@ -21,7 +23,9 @@ import {
   Keyboard,
   Globe,
   Settings,
-  MoreHorizontal
+  MoreHorizontal,
+  Menu,
+  SlidersHorizontal
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -80,6 +84,18 @@ export default function CalendarPage() {
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [editingEventId, setEditingEventId] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
+
+  const isMobile = useMediaQuery("(max-width: 768px)");
+  const [showLeftSidebar, setShowLeftSidebar] = useState(false);
+  const [showRightSidebar, setShowRightSidebar] = useState(false);
+
+  useEffect(() => {
+    if (isMobile) {
+      setViewMode("day");
+    } else {
+      setViewMode("week");
+    }
+  }, [isMobile]);
 
   // Timezones configuration
   const TIMEZONES = [
@@ -506,18 +522,45 @@ export default function CalendarPage() {
   }, [viewMode, currentDate, weekDays]);
 
   return (
-    <div className="h-full flex overflow-hidden bg-background dark:bg-dark select-none text-neutral-800 dark:text-neutral-200">
+    <div className="h-full flex overflow-hidden bg-background dark:bg-dark select-none text-neutral-800 dark:text-neutral-200 relative">
       
+      {/* Mobile Sidebar Backdrop overlay */}
+      {isMobile && (showLeftSidebar || showRightSidebar) && (
+        <div 
+          className="fixed inset-0 bg-black/45 dark:bg-black/65 z-40 backdrop-blur-xs transition-opacity duration-200"
+          onClick={() => {
+            setShowLeftSidebar(false);
+            setShowRightSidebar(false);
+          }}
+        />
+      )}
+
       {/* 1. LEFT SIDEBAR */}
-      <aside className="w-[260px] border-r border-neutral-200 dark:border-neutral-800 flex flex-col p-4 space-y-6 shrink-0 bg-neutral-50/30 dark:bg-neutral-900/10">
+      <aside className={cn(
+        "w-[260px] border-r border-neutral-200 dark:border-neutral-800 flex flex-col p-4 space-y-6 shrink-0 bg-neutral-50/30 dark:bg-neutral-900/10 transition-all duration-300 z-50",
+        isMobile 
+          ? (showLeftSidebar ? "fixed inset-y-0 left-0 bg-white dark:bg-neutral-900 shadow-2xl w-[280px]" : "fixed inset-y-0 -left-[280px] w-[280px]") 
+          : "flex"
+      )}>
         {/* Back Button */}
-        <button
-          onClick={() => router.push("/documents")}
-          className="flex items-center gap-x-2 text-xs font-bold text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-200 transition cursor-pointer px-1 py-1.5 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-md"
-        >
-          <ChevronLeft className="h-4 w-4" />
-          <span>Back to Workspace</span>
-        </button>
+        <div className="flex items-center justify-between">
+          <button
+            onClick={() => router.push("/documents")}
+            className="flex items-center gap-x-2 text-xs font-bold text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-200 transition cursor-pointer px-1 py-1.5 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-md"
+          >
+            <ChevronLeft className="h-4 w-4" />
+            <span>Back to Workspace</span>
+          </button>
+          
+          {isMobile && (
+            <button 
+              onClick={() => setShowLeftSidebar(false)} 
+              className="p-1 rounded-md hover:bg-neutral-200 dark:hover:bg-neutral-800 transition"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
+        </div>
 
         {/* Small Mini Calendar */}
         <div className="space-y-2">
@@ -544,7 +587,10 @@ export default function CalendarPage() {
               return (
                 <button
                   key={idx}
-                  onClick={() => setCurrentDate(day)}
+                  onClick={() => {
+                    setCurrentDate(day);
+                    if (isMobile) setShowLeftSidebar(false);
+                  }}
                   className={`h-6 w-6 mx-auto rounded-full flex items-center justify-center font-medium transition cursor-pointer ${
                     isSel 
                       ? "bg-blue-600 text-white font-bold" 
@@ -620,15 +666,26 @@ export default function CalendarPage() {
       </aside>
 
       {/* 2. MIDDLE SCHEDULER BOARD */}
-      <main className="flex-1 flex flex-col min-w-0">
+      <main className="flex-1 flex flex-col min-w-0 h-full relative">
         
-        {/* Sub Header (Dashboard navigation & Control tools) */}
-        <header className="h-[60px] border-b border-neutral-200 dark:border-neutral-800 px-6 flex items-center justify-between shrink-0 bg-white dark:bg-dark">
-          {/* Active Date Title */}
-          <div className="flex items-center gap-x-4">
-            <h2 className="text-lg font-bold tracking-tight text-neutral-800 dark:text-neutral-100">
-              {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
-            </h2>
+        {/* Responsive Sub Header */}
+        <header className="min-h-[60px] border-b border-neutral-200 dark:border-neutral-800 px-4 md:px-6 py-2.5 flex flex-col md:flex-row md:items-center justify-between gap-y-3 shrink-0 bg-white dark:bg-dark">
+          {/* Left Side: Sidebar Toggle & Date Navigation */}
+          <div className="flex items-center justify-between md:justify-start gap-x-2 w-full md:w-auto">
+            <div className="flex items-center gap-x-2">
+              {isMobile && (
+                <button
+                  onClick={() => setShowLeftSidebar(true)}
+                  className="p-1.5 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-md transition"
+                >
+                  <Menu className="h-5 w-5" />
+                </button>
+              )}
+              <h2 className="text-base md:text-lg font-bold tracking-tight text-neutral-800 dark:text-neutral-100">
+                {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
+              </h2>
+            </div>
+            
             <div className="flex items-center border border-neutral-250 dark:border-neutral-750 rounded-lg p-0.5 bg-neutral-50 dark:bg-neutral-900/50">
               <button
                 onClick={handlePrev}
@@ -651,38 +708,49 @@ export default function CalendarPage() {
             </div>
           </div>
 
-          {/* Right section - View modes switcher & Search */}
-          <div className="flex items-center gap-x-4">
+          {/* Right Side: View modes switcher, Search & Right Sidebar Toggle */}
+          <div className="flex items-center justify-between md:justify-end gap-x-3 w-full md:w-auto">
             {/* View Mode switches */}
             <div className="flex items-center border border-neutral-250 dark:border-neutral-750 rounded-lg p-0.5 bg-neutral-50 dark:bg-neutral-900/50 text-xs font-semibold">
               <button 
                 onClick={() => setViewMode("day")} 
-                className={`px-3 py-1 rounded-md transition cursor-pointer ${viewMode === "day" ? "bg-white dark:bg-neutral-800 shadow-2xs font-bold text-blue-600 dark:text-blue-400" : ""}`}
+                className={`px-2.5 py-1 rounded-md transition cursor-pointer ${viewMode === "day" ? "bg-white dark:bg-neutral-800 shadow-2xs font-bold text-blue-600 dark:text-blue-400" : ""}`}
               >
                 Day
               </button>
               <button 
                 onClick={() => setViewMode("week")} 
-                className={`px-3 py-1 rounded-md transition cursor-pointer ${viewMode === "week" ? "bg-white dark:bg-neutral-800 shadow-2xs font-bold text-blue-600 dark:text-blue-400" : ""}`}
+                className={`px-2.5 py-1 rounded-md transition cursor-pointer ${viewMode === "week" ? "bg-white dark:bg-neutral-800 shadow-2xs font-bold text-blue-600 dark:text-blue-400" : ""}`}
               >
                 Week
               </button>
               <button 
                 onClick={() => setViewMode("month")} 
-                className={`px-3 py-1 rounded-md transition cursor-pointer ${viewMode === "month" ? "bg-white dark:bg-neutral-800 shadow-2xs font-bold text-blue-600 dark:text-blue-400" : ""}`}
+                className={`px-2.5 py-1 rounded-md transition cursor-pointer ${viewMode === "month" ? "bg-white dark:bg-neutral-800 shadow-2xs font-bold text-blue-600 dark:text-blue-400" : ""}`}
               >
                 Month
               </button>
             </div>
 
-            {/* Quick search input */}
-            <div className="relative w-44">
-              <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-neutral-400" />
-              <input
-                type="text"
-                placeholder="Search..."
-                className="w-full pl-8 pr-3 py-1.5 text-xs bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-750 rounded-lg outline-hidden focus:ring-1 focus:ring-blue-500 text-neutral-700 dark:text-neutral-300"
-              />
+            <div className="flex items-center gap-x-2 flex-1 md:flex-none justify-end">
+              {/* Quick search input */}
+              <div className="relative w-full max-w-[130px] md:w-44">
+                <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-neutral-400" />
+                <input
+                  type="text"
+                  placeholder="Search..."
+                  className="w-full pl-8 pr-3 py-1.5 text-xs bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-750 rounded-lg outline-hidden focus:ring-1 focus:ring-blue-500 text-neutral-700 dark:text-neutral-300"
+                />
+              </div>
+
+              {isMobile && (
+                <button
+                  onClick={() => setShowRightSidebar(true)}
+                  className="p-1.5 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-md transition"
+                >
+                  <SlidersHorizontal className="h-5 w-5" />
+                </button>
+              )}
             </div>
           </div>
         </header>
@@ -880,7 +948,23 @@ export default function CalendarPage() {
       </main>
 
       {/* 3. RIGHT SIDEBAR PANE */}
-      <aside className="w-[240px] border-l border-neutral-200 dark:border-neutral-800 flex flex-col p-4 space-y-6 shrink-0 bg-neutral-50/30 dark:bg-neutral-900/10">
+      <aside className={cn(
+        "w-[240px] border-l border-neutral-200 dark:border-neutral-800 flex flex-col p-4 space-y-6 shrink-0 bg-neutral-50/30 dark:bg-neutral-900/10 transition-all duration-300 z-50",
+        isMobile 
+          ? (showRightSidebar ? "fixed inset-y-0 right-0 bg-white dark:bg-neutral-900 shadow-2xl w-[260px]" : "fixed inset-y-0 -right-[260px] w-[260px]") 
+          : "flex"
+      )}>
+        
+        {isMobile && (
+          <div className="flex justify-end">
+            <button 
+              onClick={() => setShowRightSidebar(false)} 
+              className="p-1 rounded-md hover:bg-neutral-200 dark:hover:bg-neutral-800 transition"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        )}
         
         {/* Mini HUD */}
         <div className="space-y-4">

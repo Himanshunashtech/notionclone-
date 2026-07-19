@@ -173,15 +173,15 @@ export default function LibraryPage() {
   };
 
   return (
-    <div className="h-full bg-background dark:bg-dark overflow-y-auto px-10 py-8">
+    <div className="h-full bg-background dark:bg-dark overflow-y-auto px-4 py-6 md:px-10 md:py-8">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-3xl font-bold tracking-tight text-neutral-900 dark:text-neutral-100">
+        <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-neutral-900 dark:text-neutral-100">
           Library
         </h1>
         <Button 
           onClick={onCreatePage}
-          className="bg-blue-600 hover:bg-blue-700 text-white rounded-md px-4 py-2 font-medium flex items-center gap-x-2 text-sm shadow-xs transition"
+          className="bg-blue-600 hover:bg-blue-700 text-white rounded-md px-3 py-1.5 md:px-4 md:py-2 font-medium flex items-center gap-x-2 text-xs md:text-sm shadow-xs transition"
         >
           <Plus className="h-4 w-4" />
           New page
@@ -190,7 +190,7 @@ export default function LibraryPage() {
 
       {/* Tabs & Controls */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-y-4 border-b border-neutral-200 dark:border-neutral-800 pb-3 mb-6">
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-1.5 md:gap-2">
           {tabs.map((tab) => {
             const TabIcon = tab.icon;
             const isActive = activeTab === tab.id;
@@ -199,7 +199,7 @@ export default function LibraryPage() {
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
                 className={cn(
-                  "flex items-center gap-x-2 px-3 py-1.5 text-xs font-semibold rounded-md transition select-none cursor-pointer",
+                  "flex items-center gap-x-1.5 md:gap-x-2 px-2.5 py-1.2 md:px-3 md:py-1.5 text-xs font-semibold rounded-md transition select-none cursor-pointer",
                   isActive
                     ? "bg-neutral-250 dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100"
                     : "text-muted-foreground hover:bg-neutral-100 dark:hover:bg-neutral-800/40"
@@ -213,23 +213,23 @@ export default function LibraryPage() {
         </div>
 
         {/* Search, Filter, Sort Controls */}
-        <div className="flex items-center gap-x-3 self-end md:self-auto">
+        <div className="flex items-center gap-x-2 w-full md:w-auto justify-between md:justify-end">
           {/* Search Box */}
-          <div className="relative w-48 lg:w-60">
+          <div className="relative flex-1 md:flex-none w-full md:w-48 lg:w-60">
             <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
             <input
               type="text"
               placeholder="Search library..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-8 pr-3 py-1.5 text-xs bg-neutral-50 dark:bg-neutral-850 border border-neutral-200 dark:border-neutral-750 rounded-md outline-hidden focus:ring-1 focus:ring-blue-500 text-neutral-700 dark:text-neutral-300"
+              className="w-full pl-8 pr-3 py-1.5 text-xs bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-md outline-hidden focus:ring-1 focus:ring-blue-500 text-neutral-700 dark:text-neutral-300"
             />
           </div>
 
           <button 
             onClick={() => toggleSort("edited")}
             title="Sort by edited time"
-            className="p-1.5 rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-600 dark:text-neutral-400 transition"
+            className="p-1.5 rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-600 dark:text-neutral-400 transition shrink-0"
           >
             <ArrowUpDown className="h-4 w-4" />
           </button>
@@ -240,15 +240,15 @@ export default function LibraryPage() {
       <div className="border border-neutral-200 dark:border-neutral-800 rounded-lg overflow-hidden bg-card/30">
         <div className="min-w-full divide-y divide-neutral-200 dark:divide-neutral-800">
           {/* Table Header */}
-          <div className="grid grid-cols-12 bg-neutral-50/50 dark:bg-neutral-900/30 px-6 py-3 text-left text-xs font-semibold text-neutral-500 uppercase tracking-wider select-none">
+          <div className="hidden md:grid grid-cols-12 bg-neutral-50/50 dark:bg-neutral-900/30 px-6 py-3 text-left text-xs font-semibold text-neutral-500 uppercase tracking-wider select-none">
             <div className="col-span-5 flex items-center gap-x-2">
               <FileIcon className="h-3.5 w-3.5 text-neutral-400" />
               <span>Page name</span>
             </div>
             <div className="col-span-2">Created by</div>
-            <div className="col-span-1.5">Source</div>
-            <div className="col-span-1.8">Last edited time</div>
-            <div className="col-span-1.7">Last visited time</div>
+            <div className="col-span-1">Source</div>
+            <div className="col-span-2">Last edited time</div>
+            <div className="col-span-2">Last visited time</div>
           </div>
 
           {/* Table Body */}
@@ -266,10 +266,10 @@ export default function LibraryPage() {
                   <div 
                     key={doc._id}
                     onClick={() => router.push(`/documents/${doc._id}`)}
-                    className="grid grid-cols-12 px-6 py-3.5 items-center hover:bg-neutral-100/50 dark:hover:bg-neutral-800/30 transition cursor-pointer group text-sm text-neutral-700 dark:text-neutral-300"
+                    className="flex flex-col md:grid md:grid-cols-12 px-4 md:px-6 py-3.5 items-start md:items-center hover:bg-neutral-100/50 dark:hover:bg-neutral-800/30 transition cursor-pointer group text-sm text-neutral-700 dark:text-neutral-300 gap-y-2 md:gap-y-0"
                   >
                     {/* Page name */}
-                    <div className="col-span-5 flex items-center justify-between pr-4">
+                    <div className="w-full md:col-span-5 flex items-center justify-between pr-0 md:pr-4">
                       <div className="flex items-center gap-x-2.5 truncate font-medium">
                         {doc.icon ? (
                           <span className="text-base select-none shrink-0">{doc.icon}</span>
@@ -285,15 +285,36 @@ export default function LibraryPage() {
                           e.stopPropagation();
                           router.push(`/documents/${doc._id}`);
                         }}
-                        className="opacity-0 group-hover:opacity-100 flex items-center gap-x-1 text-[10px] uppercase font-bold text-blue-500 dark:text-blue-400 bg-blue-50/50 dark:bg-blue-950/40 border border-blue-200/50 dark:border-blue-800/40 px-2 py-0.5 rounded transition"
+                        className="opacity-0 group-hover:opacity-100 md:flex hidden items-center gap-x-1 text-[10px] uppercase font-bold text-blue-500 dark:text-blue-400 bg-blue-50/50 dark:bg-blue-950/40 border border-blue-200/50 dark:border-blue-800/40 px-2 py-0.5 rounded transition"
                       >
                         <span>OPEN</span>
                         <ExternalLink className="h-2.5 w-2.5" />
                       </button>
                     </div>
 
+                    {/* Mobile Metadata Row */}
+                    <div className="flex md:hidden items-center gap-x-2.5 text-xs text-neutral-500 flex-wrap">
+                      <div className="flex items-center gap-x-1.5 truncate">
+                        <div className="h-4.5 w-4.5 rounded-full bg-neutral-200 dark:bg-neutral-700 font-bold flex items-center justify-center select-none text-[8px] text-neutral-600 dark:text-neutral-400 shrink-0">
+                          {authorName.substring(0, 1).toUpperCase()}
+                        </div>
+                        <span className="truncate text-neutral-600 dark:text-neutral-450">{authorName}</span>
+                      </div>
+                      <span className="text-neutral-300 dark:text-neutral-800">•</span>
+                      <div className="flex items-center gap-x-1">
+                        {isDocPublished ? (
+                          <Globe className="h-3 w-3 text-emerald-500" />
+                        ) : (
+                          <Lock className="h-3 w-3 text-neutral-400" />
+                        )}
+                        <span>{isDocPublished ? "Public" : "Private"}</span>
+                      </div>
+                      <span className="text-neutral-300 dark:text-neutral-800">•</span>
+                      <span>{formatRelativeTime(doc.updatedAt || doc._creationTime)}</span>
+                    </div>
+
                     {/* Created by */}
-                    <div className="col-span-2 flex items-center gap-x-2 truncate">
+                    <div className="hidden md:flex md:col-span-2 items-center gap-x-2 truncate">
                       <div className="h-5 w-5 rounded-full bg-neutral-200 dark:bg-neutral-700 font-bold flex items-center justify-center select-none text-[9px] text-neutral-600 dark:text-neutral-400 shrink-0">
                         {authorName.substring(0, 1).toUpperCase()}
                       </div>
@@ -301,7 +322,7 @@ export default function LibraryPage() {
                     </div>
 
                     {/* Source */}
-                    <div className="col-span-1.5 flex items-center gap-x-1.5 text-xs text-neutral-500">
+                    <div className="hidden md:flex md:col-span-1 items-center gap-x-1.5 text-xs text-neutral-500">
                       {isDocPublished ? (
                         <>
                           <Globe className="h-3.5 w-3.5 text-emerald-500" />
@@ -316,12 +337,12 @@ export default function LibraryPage() {
                     </div>
 
                     {/* Last edited time */}
-                    <div className="col-span-1.8 text-xs text-neutral-500">
+                    <div className="hidden md:block md:col-span-2 text-xs text-neutral-500">
                       {formatRelativeTime(doc.updatedAt || doc._creationTime)}
                     </div>
 
                     {/* Last visited time */}
-                    <div className="col-span-1.7 text-xs text-neutral-500">
+                    <div className="hidden md:block md:col-span-2 text-xs text-neutral-500">
                       {formatRelativeTime(doc.updatedAt)}
                     </div>
                   </div>
