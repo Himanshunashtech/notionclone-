@@ -87,6 +87,7 @@ export interface UserSettingsRow {
   userId: string;
   editorFont?: string;
   focusMode: boolean;
+  customLandingPageId?: string;
 }
 
 export interface CalendarEventRow {
@@ -133,6 +134,7 @@ const mapUserSettings = (row: any): UserSettingsRow => {
     userId: row.user_id,
     editorFont: row.editor_font || undefined,
     focusMode: row.focus_mode,
+    customLandingPageId: row.custom_landing_page_id || undefined,
   };
 };
 
@@ -386,13 +388,30 @@ const rawDbQueries = {
   }
 };
 const rawDbMutations = {
-  create: async (userId: string, args: { title: string; parentDocument?: string }) => {
+  create: async (userId: string | null, args: { title: string; parentDocument?: string; content?: string }) => {
+    let finalUserId = userId;
+    if (!finalUserId && args.parentDocument) {
+      const { data: parent } = await supabase
+        .from("documents")
+        .select("user_id")
+        .eq("id", args.parentDocument)
+        .single();
+      if (parent) {
+        finalUserId = parent.user_id;
+      }
+    }
+
+    if (!finalUserId) {
+      throw new Error("User ID is required to create a document");
+    }
+
     const { data, error } = await supabase
       .from("documents")
       .insert({
         title: args.title,
         parent_document: args.parentDocument || null,
-        user_id: userId,
+        user_id: finalUserId,
+        content: args.content || null,
         full_width: true,
         show_toc: true,
         is_archived: false,
@@ -694,7 +713,7 @@ const rawDbMutations = {
     return mapDocument(data);
   },
 
-  updateUserSettings: async (userId: string, args: { editorFont?: string; focusMode?: boolean }) => {
+  updateUserSettings: async (userId: string, args: { editorFont?: string; focusMode?: boolean; customLandingPageId?: string | null }) => {
     const { data: existing, error: getError } = await supabase
       .from("user_settings")
       .select("id")
@@ -704,6 +723,7 @@ const rawDbMutations = {
     const updateObj: any = {};
     if (args.editorFont !== undefined) updateObj.editor_font = args.editorFont;
     if (args.focusMode !== undefined) updateObj.focus_mode = args.focusMode;
+    if (args.customLandingPageId !== undefined) updateObj.custom_landing_page_id = args.customLandingPageId;
 
     if (existing) {
       const { error } = await supabase
@@ -718,6 +738,7 @@ const rawDbMutations = {
           user_id: userId,
           editor_font: args.editorFont || "default",
           focus_mode: args.focusMode || false,
+          custom_landing_page_id: args.customLandingPageId || null,
         });
       if (error) throw error;
     }

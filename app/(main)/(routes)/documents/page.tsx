@@ -3,16 +3,25 @@
 import Image from "next/image";
 import { useUser } from "@/components/providers/supabase-provider";
 import { Button } from "@/components/ui/button";
-import { PlusCircle } from "lucide-react";
+import { PlusCircle, Loader2 } from "lucide-react";
 import { useMutation } from "@/hooks/use-supabase-db";
 import { api } from "@/lib/supabase-db";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
+import { useCustomLandingPage } from "@/hooks/useCustomLandingPage";
+import { useEffect } from "react";
 
 const DocumentsPage = () => {
   const { user } = useUser();
   const router = useRouter();
   const create = useMutation(api.documents.create);
+  const { customLandingPageId, isLoading } = useCustomLandingPage();
+
+  useEffect(() => {
+    if (!isLoading && customLandingPageId) {
+      router.push(`/documents/${customLandingPageId}`);
+    }
+  }, [customLandingPageId, isLoading, router]);
 
   const onCreate = () => {
     const promise = create({ title: "Untitled" }).then((documentId) =>
@@ -25,6 +34,14 @@ const DocumentsPage = () => {
       error: "Failed to create a new note.",
     });
   };
+
+  if (isLoading || customLandingPageId) {
+    return (
+      <div className="h-full flex items-center justify-center">
+        <Loader2 className="h-6 w-6 text-muted-foreground animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-full flex-col items-center justify-center space-y-4">

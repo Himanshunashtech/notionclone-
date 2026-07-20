@@ -226,6 +226,7 @@ export const FilePreviewModal = () => {
                   />
                 ) : (
                   <Editor
+                    documentId={previewModal.documentId!}
                     onChange={onChange}
                     initialContent={document.content}
                     smallText={document.smallText}

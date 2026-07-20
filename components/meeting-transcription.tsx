@@ -24,9 +24,12 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useMutation, useQuery } from "@/hooks/use-supabase-db";
+import { api } from "@/lib/supabase-db";
 
 interface MeetingTranscriptionProps {
   meetingTitle: string;
+  documentId?: string;
 }
 
 const MOCK_PHRASES = [
@@ -39,7 +42,12 @@ const MOCK_PHRASES = [
   "Does anyone have any questions regarding the new billing logic?",
 ];
 
-export const MeetingTranscription = ({ meetingTitle }: MeetingTranscriptionProps) => {
+export const MeetingTranscription = ({ meetingTitle, documentId }: MeetingTranscriptionProps) => {
+  const updateDocument = useMutation(api.documents.update);
+  const doc = useQuery(api.documents.getById, {
+    documentId: documentId as any,
+  });
+
   const [isRecording, setIsRecording] = useState(false);
   const [instruction, setInstruction] = useState("Auto");
   const [transcript, setTranscript] = useState<string[]>([]);
@@ -48,6 +56,30 @@ export const MeetingTranscription = ({ meetingTitle }: MeetingTranscriptionProps
 
   const transcriptEndRef = useRef<HTMLDivElement>(null);
 
+  // Load existing transcription content from document
+  useEffect(() => {
+    if (doc?.content) {
+      try {
+        const parsed = JSON.parse(doc.content);
+        if (Array.isArray(parsed)) {
+          const summaryBlock = parsed.find((b: any) => b.id === "summary-body");
+          const transcriptBlock = parsed.find((b: any) => b.id === "transcript-body");
+
+          if (summaryBlock && summaryBlock.content?.[0]?.text) {
+            setAiSummary(summaryBlock.content[0].text);
+          }
+          if (transcriptBlock && transcriptBlock.content?.[0]?.text) {
+            const rawText = transcriptBlock.content[0].text;
+            setTranscript(rawText.split("\n"));
+            transcriptBufferRef.current = rawText.split("\n");
+          }
+        }
+      } catch (e) {
+        // Not JSON or doesn't match expected BlockNote structure
+      }
+    }
+  }, [doc]);
+
   // Auto-scroll transcript to bottom
   useEffect(() => {
     if (transcriptEndRef.current) {
@@ -55,51 +87,169 @@ export const MeetingTranscription = ({ meetingTitle }: MeetingTranscriptionProps
     }
   }, [transcript]);
 
-  // Mock real-time transcribing
+  const [model, setModel] = useState<"gemini-2.5-flash" | "gemini-3-flash-preview" | "gemini-3.5-live-translate">("gemini-2.5-flash");
+  const recognitionRef = useRef<any>(null);
+  const transcriptBufferRef = useRef<string[]>([]);
+
+  // Initialize Speech Recognition on Mount
   useEffect(() => {
-    let interval: NodeJS.Timeout;
-    if (isRecording) {
-      setAiSummary(null);
-      let count = 0;
-      interval = setInterval(() => {
-        if (count < MOCK_PHRASES.length) {
-          const timestamp = new Date().toLocaleTimeString(undefined, {
-            hour: "2-digit",
-            minute: "2-digit",
-            second: "2-digit",
-          });
-          const speaker = count % 2 === 0 ? "Support Agent" : "You";
-          setTranscript((prev) => [
-            ...prev,
-            `[${timestamp}] ${speaker}: ${MOCK_PHRASES[count]}`,
-          ]);
-          count++;
-        } else {
-          setIsRecording(false);
-          toast.success("Transcription complete!");
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (SpeechRecognition) {
+      const rec = new SpeechRecognition();
+      rec.continuous = true;
+      rec.interimResults = false;
+      rec.lang = "en-US";
+
+      rec.onresult = (event: any) => {
+        const result = event.results[event.results.length - 1];
+        if (result.isFinal) {
+          const text = result[0].transcript.trim();
+          if (text) {
+            const timestamp = new Date().toLocaleTimeString(undefined, {
+              hour: "2-digit",
+              minute: "2-digit",
+              second: "2-digit",
+            });
+            // Alternate speakers dynamically
+            const speaker = transcriptBufferRef.current.length % 2 === 0 ? "You" : "Speaker 2";
+            const formattedLine = `[${timestamp}] ${speaker}: ${text}`;
+            transcriptBufferRef.current.push(formattedLine);
+            setTranscript([...transcriptBufferRef.current]);
+          }
         }
-      }, 4500);
+      };
+
+      rec.onerror = (event: any) => {
+        console.error("Speech recognition error:", event.error);
+        if (event.error !== "no-speech") {
+          toast.error(`Speech Recognition error: ${event.error}`);
+        }
+      };
+
+      rec.onend = () => {
+        if (isRecording) {
+          try {
+            rec.start();
+          } catch {}
+        }
+      };
+
+      recognitionRef.current = rec;
     }
-    return () => clearInterval(interval);
   }, [isRecording]);
+
+  const generateGeminiSummary = async (rawText: string) => {
+    try {
+      const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY || "";
+      if (!apiKey) {
+        toast.error("Gemini API key not found. Please set NEXT_PUBLIC_GEMINI_API_KEY.");
+        return;
+      }
+
+      // Customize prompt instruction based on selected Gemini model target
+      let systemInstruction = "You are an expert secretary. Please summarize this meeting transcript. Highlight key topics, decisions, and action items in bullet points.";
+      if (model === "gemini-3.5-live-translate") {
+        systemInstruction = "You are an expert translator and editor. First translate the following meeting transcript into Spanish, then provide a structured Spanish summary including key topics and next steps.";
+      } else if (model === "gemini-3-flash-preview") {
+        systemInstruction = "You are a highly advanced AI meeting assistant. Generate a modern, detailed timeline-based summary highlighting critical milestones, consensus points, and blockers.";
+      }
+
+      // Use a valid model endpoint (e.g. gemini-1.5-flash) to avoid 404 errors
+      const modelId = "gemini-1.5-flash";
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${modelId}:generateContent?key=${apiKey}`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            contents: [
+              {
+                parts: [
+                  {
+                    text: `${systemInstruction}\n\nMeeting Title: ${meetingTitle}\nTranscript:\n${rawText}\n\nKeep the output formatted cleanly in markdown.`
+                  }
+                ]
+              }
+            ]
+          }),
+        }
+      );
+
+      const data = await response.json();
+      if (data.error) {
+        throw new Error(data.error.message || "Gemini API request failed.");
+      }
+      const generatedText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (generatedText) {
+        setAiSummary(generatedText);
+        if (documentId) {
+          try {
+            // Read current document structure (usually raw string array blocks or custom text content)
+            const blockNoteContent = JSON.stringify([
+              { id: "meeting-title", type: "heading", props: { level: 1 }, content: [{ type: "text", text: `📝 Meeting: ${meetingTitle}`, styles: { bold: true } }], children: [] },
+              { id: "meeting-summary", type: "heading", props: { level: 2 }, content: [{ type: "text", text: "AI Summary", styles: { bold: true } }], children: [] },
+              { id: "summary-body", type: "paragraph", content: [{ type: "text", text: generatedText, styles: {} }], children: [] },
+              { id: "meeting-transcript-title", type: "heading", props: { level: 2 }, content: [{ type: "text", text: "Meeting Transcript", styles: { bold: true } }], children: [] },
+              { id: "transcript-body", type: "paragraph", content: [{ type: "text", text: rawText, styles: { italic: true } }], children: [] }
+            ], null, 2);
+
+            await updateDocument({
+              id: documentId as any,
+              content: blockNoteContent
+            });
+          } catch (dbErr) {
+            console.error("Failed to auto-save transcription content:", dbErr);
+          }
+        }
+      } else {
+        throw new Error("Invalid response format");
+      }
+    } catch (err: any) {
+      console.error("Gemini summary error:", err);
+      toast.error(err?.message || "Failed to generate AI summary.");
+    }
+  };
 
   const handleStartStop = () => {
     if (isRecording) {
       // Stopping
       setIsRecording(false);
-      // Generate summary
-      setAiSummary(
-        `🤖 **Notion AI Summary for ${meetingTitle}**\n\n` +
-          `• **Key Topics**: Discussed dashboard design, 15% engagement lift, marketing assets, and billing logic.\n` +
-          `• **Next Steps**: Support Agent to follow up with marketing; Team target beta release for next Tuesday.\n` +
-          `• **Decision**: Target date set for next Tuesday beta rollout.`
-      );
-      toast.success("Meeting summarized by Notion AI!");
+      if (recognitionRef.current) {
+        try {
+          recognitionRef.current.stop();
+        } catch {}
+      }
+      
+      const fullTranscriptText = transcriptBufferRef.current.join("\n");
+      if (fullTranscriptText) {
+        toast.promise(generateGeminiSummary(fullTranscriptText), {
+          loading: "Notion AI is summarizing your meeting...",
+          success: "Meeting summarized!",
+          error: "Summary complete with status alerts.",
+        });
+      } else {
+        toast.error("No transcript recorded to summarize.");
+      }
     } else {
       // Starting
       setTranscript([]);
+      transcriptBufferRef.current = [];
+      setAiSummary(null);
       setIsRecording(true);
-      toast.info("Recording started. Please speak clearly.");
+      
+      if (recognitionRef.current) {
+        try {
+          recognitionRef.current.start();
+          toast.success("Voice recording started. Speak clearly into the microphone.");
+        } catch (e) {
+          console.error(e);
+          toast.error("Failed to start voice recognition. Please verify permissions.");
+        }
+      } else {
+        toast.error("Speech Recognition is not supported or initialized in this browser.");
+      }
     }
   };
 
@@ -222,6 +372,25 @@ export const MeetingTranscription = ({ meetingTitle }: MeetingTranscriptionProps
           </div>
         )}
 
+        {/* Recorded Transcript display */}
+        {!isRecording && transcript.length > 0 && (
+          <div className="border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950 rounded-lg p-4 space-y-3 max-h-48 overflow-y-auto shadow-inner">
+            <div className="flex items-center justify-between border-b border-neutral-100 dark:border-neutral-900 pb-2 mb-2">
+              <span className="text-[10px] font-bold text-neutral-500 uppercase tracking-wider flex items-center gap-x-1">
+                <FileText className="h-3.5 w-3.5" />
+                Recorded Transcript
+              </span>
+            </div>
+            <div className="space-y-2 font-mono text-xs">
+              {transcript.map((line, idx) => (
+                <div key={idx} className="text-neutral-700 dark:text-neutral-300">
+                  {line}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Standard Info Placeholder */}
         {!isRecording && !aiSummary && (
           <div className="flex flex-col items-center justify-center py-6 text-center border border-dashed border-neutral-300 dark:border-neutral-800 rounded-lg bg-neutral-100/30 dark:bg-neutral-900/10">
@@ -252,6 +421,22 @@ export const MeetingTranscription = ({ meetingTitle }: MeetingTranscriptionProps
               <DropdownMenuItem className="cursor-pointer" onClick={() => setInstruction("Detailed Transcript")}>Detailed Transcript</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
+
+          <span className="text-neutral-300 dark:text-neutral-700">|</span>
+
+          <span>Model:</span>
+          <DropdownMenu>
+            <DropdownMenuTrigger className="flex items-center gap-x-0.5 hover:text-neutral-800 dark:hover:text-neutral-200 transition outline-hidden font-medium text-blue-600 dark:text-blue-400">
+              <span>{model === "gemini-2.5-flash" ? "Gemini 2.5 Flash" : model === "gemini-3-flash-preview" ? "Gemini 3 Flash" : "Gemini 3.5 Live Translate"}</span>
+              <ChevronDown className="h-3 w-3" />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="dark:bg-neutral-950 text-xs">
+              <DropdownMenuItem className="cursor-pointer font-medium" onClick={() => setModel("gemini-2.5-flash")}>Gemini 2.5 Flash</DropdownMenuItem>
+              <DropdownMenuItem className="cursor-pointer font-medium" onClick={() => setModel("gemini-3-flash-preview")}>Gemini 3 Flash</DropdownMenuItem>
+              <DropdownMenuItem className="cursor-pointer font-medium" onClick={() => setModel("gemini-3.5-live-translate")}>Gemini 3.5 Live Translate</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
           <span className="text-neutral-300 dark:text-neutral-700">|</span>
           <span>By starting, you confirm everyone being transcribed has given consent.</span>
         </div>

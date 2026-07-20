@@ -15,6 +15,9 @@ import { ModeToggle } from "../mode-toggle";
 import { EditorFont, useEditorFont } from "@/hooks/useEditorFont";
 import { useFocusMode } from "@/hooks/useFocusMode";
 import { fontFamilies } from "@/lib/editorFont";
+import { useCustomLandingPage } from "@/hooks/useCustomLandingPage";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 
 const FONTS: { label: string; value: EditorFont }[] = [
   { label: "Default", value: "default" },
@@ -24,12 +27,14 @@ const FONTS: { label: string; value: EditorFont }[] = [
 
 export const SettingsModal = () => {
   const settings = useSettings();
+  const router = useRouter();
   const { editorFont, setEditorFont } = useEditorFont({
     enabled: settings.isOpen,
   });
   const { focusMode, setFocusMode } = useFocusMode({
     enabled: settings.isOpen,
   });
+  const { customLandingPageId, enableCustomLandingPage, disableCustomLandingPage } = useCustomLandingPage();
 
   return (
     <Dialog open={settings.isOpen} onOpenChange={settings.onClose}>
@@ -98,6 +103,37 @@ export const SettingsModal = () => {
               </span>
             </div>
             <Switch checked={focusMode} onCheckedChange={setFocusMode} />
+          </div>
+          <div className="flex items-center justify-between gap-4 py-2">
+            <div className="flex flex-col gap-y-1">
+              <Label>Custom landing page</Label>
+              <span className="text-muted-foreground text-[0.8rem]">
+                Create and set a custom workspace page as your main dashboard.
+              </span>
+            </div>
+            <Switch 
+              checked={!!customLandingPageId} 
+              onCheckedChange={async (checked) => {
+                if (checked) {
+                  const promise = enableCustomLandingPage().then((id) => {
+                    router.push(`/documents/${id}`);
+                    settings.onClose();
+                  });
+                  toast.promise(promise, {
+                    loading: "Enabling custom workspace landing page...",
+                    success: "Custom landing page enabled!",
+                    error: "Failed to enable custom landing page."
+                  });
+                } else {
+                  const promise = disableCustomLandingPage();
+                  toast.promise(promise, {
+                    loading: "Disabling custom workspace landing page...",
+                    success: "Custom landing page disabled.",
+                    error: "Failed to disable custom landing page."
+                  });
+                }
+              }} 
+            />
           </div>
         </div>
       </DialogContent>

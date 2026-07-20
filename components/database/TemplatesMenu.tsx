@@ -11,6 +11,7 @@ import {
   FolderOpen,
   Target,
   CalendarDays,
+  LayoutGrid,
 } from "lucide-react";
 import { useState } from "react";
 
@@ -57,78 +58,97 @@ const MEETING_LIST_CONFIG = JSON.stringify({
   ],
 }, null, 2);
 
-const MEETING_NOTES_CONTENT = JSON.stringify([
-  {
-    id: "heading-1",
-    type: "heading",
-    props: { level: 1, textColor: "default", backgroundColor: "default", textAlignment: "left" },
-    content: [{ type: "text", text: "📅 Meeting Notes", styles: { bold: true } }],
-    children: [],
-  },
-  {
-    id: "meta-date",
-    type: "paragraph",
-    props: { textColor: "default", backgroundColor: "default", textAlignment: "left" },
-    content: [{ type: "text", text: `Date: ${new Date().toLocaleDateString()}`, styles: { italic: true } }],
-    children: [],
-  },
-  {
-    id: "meta-attendees",
-    type: "paragraph",
-    props: { textColor: "default", backgroundColor: "default", textAlignment: "left" },
-    content: [{ type: "text", text: "Attendees: ", styles: {} }],
-    children: [],
-  },
-  {
-    id: "heading-agenda",
-    type: "heading",
-    props: { level: 3, textColor: "default", backgroundColor: "default", textAlignment: "left" },
-    content: [{ type: "text", text: "Agenda", styles: { bold: true } }],
-    children: [],
-  },
-  {
-    id: "agenda-1",
-    type: "bulletListItem",
-    props: { textColor: "default", backgroundColor: "default", textAlignment: "left" },
-    content: [{ type: "text", text: "Discuss current roadmap and release plan", styles: {} }],
-    children: [],
-  },
-  {
-    id: "agenda-2",
-    type: "bulletListItem",
-    props: { textColor: "default", backgroundColor: "default", textAlignment: "left" },
-    content: [{ type: "text", text: "Review blockers and outstanding tasks", styles: {} }],
-    children: [],
-  },
-  {
-    id: "heading-decisions",
-    type: "heading",
-    props: { level: 3, textColor: "default", backgroundColor: "default", textAlignment: "left" },
-    content: [{ type: "text", text: "Key Decisions", styles: { bold: true } }],
-    children: [],
-  },
-  {
-    id: "decision-1",
-    type: "bulletListItem",
-    props: { textColor: "default", backgroundColor: "default", textAlignment: "left" },
-    content: [{ type: "text", text: "—", styles: {} }],
-    children: [],
-  },
-  {
-    id: "heading-actions",
-    type: "heading",
-    props: { level: 3, textColor: "default", backgroundColor: "default", textAlignment: "left" },
-    content: [{ type: "text", text: "Action Items", styles: { bold: true } }],
-    children: [],
-  },
-  {
-    id: "action-1",
-    type: "checkListItem",
-    props: { checked: false, textColor: "default", backgroundColor: "default", textAlignment: "left" },
-    content: [{ type: "text", text: "Follow up on open items", styles: {} }],
-    children: [],
-  },
-], null, 2);
+const GALLERY_CONFIG = JSON.stringify({
+  type: "database",
+  viewType: "gallery",
+  properties: [
+    { id: "status",   name: "Status",   type: "select", options: ["Active", "Draft", "Archived"] },
+    { id: "tags",     name: "Tags",     type: "multiselect", options: ["Design", "Dev", "Marketing"] },
+  ],
+}, null, 2);
+
+const getMeetingNotesContent = () => {
+  const now = new Date();
+  const hours = now.getHours();
+  const minutes = now.getMinutes().toString().padStart(2, "0");
+  const ampm = hours >= 12 ? "PM" : "AM";
+  const hour12 = hours % 12 || 12;
+  const timeStr = `${hour12}:${minutes} ${ampm}`;
+  const dateLabel = `@Today  ${timeStr}`;
+
+  return JSON.stringify([
+    {
+      id: "heading-1",
+      type: "heading",
+      props: { level: 1, textColor: "default", backgroundColor: "default", textAlignment: "left" },
+      content: [{ type: "text", text: "\uD83D\uDCC5 Meeting Notes", styles: { bold: true } }],
+      children: [],
+    },
+    {
+      id: "meta-date",
+      type: "paragraph",
+      props: { textColor: "default", backgroundColor: "default", textAlignment: "left" },
+      content: [{ type: "text", text: `Date: ${dateLabel}`, styles: { italic: true } }],
+      children: [],
+    },
+    {
+      id: "meta-attendees",
+      type: "paragraph",
+      props: { textColor: "default", backgroundColor: "default", textAlignment: "left" },
+      content: [{ type: "text", text: "Attendees: ", styles: {} }],
+      children: [],
+    },
+    {
+      id: "heading-agenda",
+      type: "heading",
+      props: { level: 3, textColor: "default", backgroundColor: "default", textAlignment: "left" },
+      content: [{ type: "text", text: "Agenda", styles: { bold: true } }],
+      children: [],
+    },
+    {
+      id: "agenda-1",
+      type: "bulletListItem",
+      props: { textColor: "default", backgroundColor: "default", textAlignment: "left" },
+      content: [{ type: "text", text: "Discuss current roadmap and release plan", styles: {} }],
+      children: [],
+    },
+    {
+      id: "agenda-2",
+      type: "bulletListItem",
+      props: { textColor: "default", backgroundColor: "default", textAlignment: "left" },
+      content: [{ type: "text", text: "Review blockers and outstanding tasks", styles: {} }],
+      children: [],
+    },
+    {
+      id: "heading-decisions",
+      type: "heading",
+      props: { level: 3, textColor: "default", backgroundColor: "default", textAlignment: "left" },
+      content: [{ type: "text", text: "Key Decisions", styles: { bold: true } }],
+      children: [],
+    },
+    {
+      id: "decision-1",
+      type: "bulletListItem",
+      props: { textColor: "default", backgroundColor: "default", textAlignment: "left" },
+      content: [{ type: "text", text: "\u2014", styles: {} }],
+      children: [],
+    },
+    {
+      id: "heading-actions",
+      type: "heading",
+      props: { level: 3, textColor: "default", backgroundColor: "default", textAlignment: "left" },
+      content: [{ type: "text", text: "Action Items", styles: { bold: true } }],
+      children: [],
+    },
+    {
+      id: "action-1",
+      type: "checkListItem",
+      props: { checked: false, textColor: "default", backgroundColor: "default", textAlignment: "left" },
+      content: [{ type: "text", text: "Follow up on open items", styles: {} }],
+      children: [],
+    },
+  ], null, 2);
+};
 
 const PROJECT_TABLE_CONFIG = JSON.stringify({
   type: "database",
@@ -199,6 +219,15 @@ const TEMPLATES: TemplateCard[] = [
     category: "general",
   },
   {
+    label: "Gallery View",
+    desc: "Display visual cards with image previews",
+    icon: <LayoutGrid className="h-6 w-6" />,
+    color: "violet",
+    type: "table",
+    content: GALLERY_CONFIG,
+    category: "general",
+  },
+  {
     label: "Document Hub",
     desc: "Auto-table of all sub-pages with type & status",
     icon: <FolderOpen className="h-6 w-6" />,
@@ -214,7 +243,7 @@ const TEMPLATES: TemplateCard[] = [
     icon: <FileText className="h-6 w-6" />,
     color: "sky",
     type: "document",
-    content: MEETING_NOTES_CONTENT,
+    content: "",
     category: "meeting",
   },
   {
@@ -335,7 +364,10 @@ export const TemplatesMenu = ({ documentId: _documentId, onSelect }: TemplatesMe
               key={tmpl.label}
               variant="outline"
               className={`group h-auto flex flex-col items-start gap-y-1.5 p-4 border-neutral-200 dark:border-neutral-800 text-left transition ${colors.hover}`}
-              onClick={() => onSelect(tmpl.type, tmpl.content)}
+              onClick={() => {
+                const content = tmpl.label === "Meeting Notes" ? getMeetingNotesContent() : tmpl.content;
+                onSelect(tmpl.type, content);
+              }}
             >
               <span className={`text-neutral-400 transition ${colors.bg}`}>
                 {tmpl.icon}

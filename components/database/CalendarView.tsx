@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { Doc, Id } from "@/lib/supabase-db";
 import { DatabaseConfig, parseDatabaseRow } from "./database-utils";
 import { ChevronLeft, ChevronRight, Plus, File } from "lucide-react";
@@ -16,6 +16,8 @@ interface CalendarViewProps {
   preview?: boolean;
 }
 
+const MONTH_SHORT = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+
 export const CalendarView = ({
   documentId,
   config,
@@ -26,6 +28,8 @@ export const CalendarView = ({
   const createNote = useMutation(api.documents.create);
 
   const [currentDate, setCurrentDate] = useState(new Date());
+  const [hoveredDay, setHoveredDay] = useState<string | null>(null);
+  const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
@@ -48,16 +52,13 @@ export const CalendarView = ({
   const daysInMonth = new Date(year, month + 1, 0).getDate();
 
   const calendarDays: Date[] = [];
-  // Days from previous month for padding
   const prevMonthDays = new Date(year, month, 0).getDate();
   for (let i = startDayOfWeek - 1; i >= 0; i--) {
     calendarDays.push(new Date(year, month - 1, prevMonthDays - i));
   }
-  // Days of current month
   for (let i = 1; i <= daysInMonth; i++) {
     calendarDays.push(new Date(year, month, i));
   }
-  // Days of next month for padding
   const remaining = 35 - calendarDays.length;
   const paddingNext = remaining > 0 ? remaining : (42 - calendarDays.length);
   for (let i = 1; i <= paddingNext; i++) {
@@ -75,7 +76,6 @@ export const CalendarView = ({
   const itemsByDate: Record<string, Doc<"documents">[]> = {};
   subpages.forEach((page) => {
     const row = parseDatabaseRow(page.content);
-    // Find any date property in values
     const dateProp = config.properties.find((p) => p.type === "date");
     if (dateProp) {
       const val = row.values[dateProp.id] || "";
@@ -91,10 +91,10 @@ export const CalendarView = ({
 
     const dateProp = config.properties.find((p) => p.type === "date");
     const defaultValues: Record<string, string> = {};
-    
+
     config.properties.forEach((prop) => {
-      defaultValues[prop.id] = prop.type === "date" && dateProp?.id === prop.id 
-        ? dateStr 
+      defaultValues[prop.id] = prop.type === "date" && dateProp?.id === prop.id
+        ? dateStr
         : "";
     });
 
@@ -130,7 +130,7 @@ export const CalendarView = ({
 
   return (
     <div className="border border-neutral-200 dark:border-neutral-800 rounded-xl overflow-hidden bg-white dark:bg-neutral-900 shadow-xs">
-      
+
       {/* Calendar Header */}
       <div className="flex items-center justify-between p-4 border-b border-neutral-200 dark:border-neutral-800">
         <h3 className="font-bold text-base">
@@ -172,22 +172,35 @@ export const CalendarView = ({
           const formatted = getFormattedDateString(day);
           const dayItems = itemsByDate[formatted] || [];
           const isToday = new Date().toDateString() === day.toDateString();
+          const isHovered = hoveredDay === formatted;
+
+          // Popup appears to the right except for last 2 columns
+          const col = idx % 7;
+          const popupSide = col >= 5 ? "right-full mr-1" : "left-full ml-1";
 
           return (
             <div
               key={idx}
-              className={`min-h-[100px] p-2 flex flex-col justify-between transition ${
-                isCurrentMonth 
-                  ? "bg-transparent" 
+              className={`relative min-h-[100px] p-2 flex flex-col justify-between transition group/day ${
+                isCurrentMonth
+                  ? "bg-transparent"
                   : "bg-neutral-50/40 dark:bg-neutral-900/10 text-neutral-400"
               }`}
+              onMouseEnter={() => {
+                if (hoverTimer.current) clearTimeout(hoverTimer.current);
+                hoverTimer.current = setTimeout(() => setHoveredDay(formatted), 300);
+              }}
+              onMouseLeave={() => {
+                if (hoverTimer.current) clearTimeout(hoverTimer.current);
+                setHoveredDay(null);
+              }}
             >
               {/* Day Number Header */}
               <div className="flex items-center justify-between mb-1">
                 <span
                   className={`text-xs font-semibold rounded-full w-5 h-5 flex items-center justify-center ${
-                    isToday 
-                      ? "bg-blue-600 text-white" 
+                    isToday
+                      ? "bg-blue-600 text-white"
                       : isCurrentMonth ? "text-neutral-700 dark:text-neutral-300" : "text-neutral-400"
                   }`}
                 >
@@ -196,7 +209,7 @@ export const CalendarView = ({
                 {!preview && isCurrentMonth && (
                   <button
                     onClick={() => handleAddForDate(formatted)}
-                    className="opacity-0 hover:opacity-100 p-0.5 text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300 transition"
+                    className="opacity-0 group-hover/day:opacity-100 p-0.5 text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300 transition"
                   >
                     <Plus className="h-3 w-3" />
                   </button>
@@ -216,6 +229,51 @@ export const CalendarView = ({
                   </Link>
                 ))}
               </div>
+
+              {/* ── Hover Event Preview Panel ── */}
+              {isHovered && (
+                <div
+                  className={`absolute top-0 z-50 ${popupSide} rounded-lg border border-neutral-700 bg-[#1e1e1e] shadow-2xl overflow-hidden pointer-events-none`}
+                  style={{ minWidth: "210px", width: "210px" }}
+                >
+                  {/* Panel header: date label + divider + event count / "No more events" */}
+                  <div className="flex items-center gap-x-0 px-4 py-3">
+                    <div className="flex flex-col leading-none shrink-0">
+                      {isToday && (
+                        <span className="text-[11px] font-bold text-red-400 mb-0.5 leading-none">Today</span>
+                      )}
+                      <span className="text-[11px] text-neutral-400 font-medium leading-none">
+                        {MONTH_SHORT[day.getMonth()]} {day.getDate()}
+                      </span>
+                    </div>
+                    <div className="w-px self-stretch bg-neutral-600 mx-3" />
+                    {dayItems.length === 0 ? (
+                      <span className="text-[12px] text-neutral-400">No more events</span>
+                    ) : (
+                      <span className="text-[12px] text-neutral-200 font-semibold">
+                        {dayItems.length} event{dayItems.length > 1 ? "s" : ""}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Events list */}
+                  {dayItems.length > 0 && (
+                    <div className="px-3 pb-3 space-y-1 max-h-40 overflow-y-auto scrollbar-none">
+                      {dayItems.map((item) => (
+                        <div
+                          key={item._id}
+                          className="flex items-center gap-x-2 px-2 py-1.5 rounded-md bg-neutral-800 border border-neutral-700/60"
+                        >
+                          <File className="h-3 w-3 shrink-0 text-neutral-400" />
+                          <span className="text-[11px] text-neutral-200 truncate">
+                            {item.title || "Untitled"}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           );
         })}

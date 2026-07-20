@@ -34,6 +34,8 @@ export const metadata: Metadata = {
   },
 };
 
+import { MentionModalProvider } from "@/hooks/useMentionModal";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -45,17 +47,19 @@ export default function RootLayout({
         className={`${inter.className} ${inter.variable} ${lora.variable} ${jetbrainsMono.variable}`}
       >
         <SupabaseProvider>
-          <ThemeProvider
-            attribute="class"
-            defaultTheme="system"
-            enableSystem
-            disableTransitionOnChange
-            storageKey="zotion-theme-2"
-          >
-            <ToasterProvider />
-            <ModalProvider />
-            {children}
-          </ThemeProvider>
+          <MentionModalProvider>
+            <ThemeProvider
+              attribute="class"
+              defaultTheme="system"
+              enableSystem
+              disableTransitionOnChange
+              storageKey="zotion-theme-2"
+            >
+              <ToasterProvider />
+              <ModalProvider />
+              {children}
+            </ThemeProvider>
+          </MentionModalProvider>
         </SupabaseProvider>
       </body>
     </html>

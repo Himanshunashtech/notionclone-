@@ -68,7 +68,7 @@ const DocumentIdPage = ({ params }: DocumentIdPageProps) => {
     );
   }
 
-  if (document === null) {
+  if (document === null || !document.isPublished) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[70vh] px-4 space-y-6 text-center">
         <div className="h-16 w-16 bg-rose-500/10 rounded-2xl flex items-center justify-center text-rose-500 animate-bounce">
@@ -109,6 +109,7 @@ const DocumentIdPage = ({ params }: DocumentIdPageProps) => {
         ) : (
           <Editor
             key={documentId}
+            documentId={documentId}
             editable={false}
             onChange={onChange}
             initialContent={document.content}

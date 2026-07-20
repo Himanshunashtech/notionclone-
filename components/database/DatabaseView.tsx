@@ -19,6 +19,7 @@ import {
   FolderOpen,
   X,
   Sparkles,
+  Image,
 } from "lucide-react";
 import { parseDatabaseConfig, defaultValueForType, parseDatabaseRow } from "./database-utils";
 import { TableView } from "@/components/database/TableView";
@@ -28,6 +29,8 @@ import { DocumentView } from "@/components/database/DocumentView";
 import { CalendarView } from "@/components/database/CalendarView";
 import { TimelineView } from "@/components/database/TimelineView";
 import { ChartView } from "@/components/database/ChartView";
+import { GalleryView } from "@/components/database/GalleryView";
+import { FormView } from "@/components/database/FormView";
 import { toast } from "sonner";
 import {
   DropdownMenu,
@@ -45,7 +48,7 @@ interface DatabaseViewProps {
   preview?: boolean;
 }
 
-type ViewType = "table" | "board" | "todo" | "document" | "calendar" | "timeline" | "chart";
+type ViewType = "table" | "board" | "todo" | "document" | "calendar" | "timeline" | "chart" | "gallery" | "form";
 
 export const DatabaseView = ({
   documentId,
@@ -282,6 +285,7 @@ export const DatabaseView = ({
     { key: "calendar" as const, label: "Calendar", Icon: Table },
     { key: "timeline" as const, label: "Timeline", Icon: LayoutGrid },
     { key: "chart" as const, label: "Chart", Icon: ListChecks },
+    { key: "gallery" as const, label: "Gallery", Icon: Image },
   ];
 
   // Dynamically show tabs based on configured views
@@ -420,7 +424,7 @@ export const DatabaseView = ({
             <ListFilter className="h-3.5 w-3.5" />
           </button>
 
-           {/* AI Autofill Button */}
+          {/* AI Autofill Button */}
           {!preview && (
             <button
               onClick={handleAIFill}
@@ -468,6 +472,12 @@ export const DatabaseView = ({
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => handleViewChange("chart")} className="text-xs cursor-pointer">
                 Switch to Chart view
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleViewChange("gallery")} className="text-xs cursor-pointer">
+                Switch to Gallery view
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleViewChange("form")} className="text-xs cursor-pointer">
+                Switch to Form view
               </DropdownMenuItem>
               {!preview && (
                 <>
@@ -702,6 +712,24 @@ export const DatabaseView = ({
             config={config}
             subpages={processedSubpages}
             preview={preview}
+          />
+        )}
+        {activeTab === "gallery" && (
+          <GalleryView
+            documentId={documentId}
+            config={config}
+            subpages={processedSubpages}
+            preview={preview}
+            onAddRow={handleAddRow}
+          />
+        )}
+        {activeTab === "form" && (
+          <FormView
+            documentId={documentId}
+            config={config}
+            subpages={processedSubpages}
+            preview={preview}
+            onAddRow={handleAddRow}
           />
         )}
       </div>

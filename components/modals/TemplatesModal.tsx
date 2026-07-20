@@ -21,10 +21,10 @@ const MEETING_TABLE_CONFIG = JSON.stringify({
   type: "database",
   viewType: "table",
   properties: [
-    { id: "status",    name: "Status",    type: "select",  options: ["To Do", "In Progress", "Done", "Blocked"] },
-    { id: "priority",  name: "Priority",  type: "select",  options: ["High", "Medium", "Low"] },
-    { id: "owner",     name: "Owner",     type: "text" },
-    { id: "due_date",  name: "Due Date",  type: "date" },
+    { id: "status", name: "Status", type: "select", options: ["To Do", "In Progress", "Done", "Blocked"] },
+    { id: "priority", name: "Priority", type: "select", options: ["High", "Medium", "Low"] },
+    { id: "owner", name: "Owner", type: "text" },
+    { id: "due_date", name: "Due Date", type: "date" },
     { id: "meeting_type", name: "Meeting Type", type: "select", options: ["1:1", "Team Sync", "All Hands", "Retrospective", "Planning"] },
   ],
 }, null, 2);
@@ -33,9 +33,9 @@ const MEETING_BOARD_CONFIG = JSON.stringify({
   type: "database",
   viewType: "board",
   properties: [
-    { id: "status",   name: "Status",   type: "select", options: ["To Do", "In Progress", "Done", "Blocked"] },
+    { id: "status", name: "Status", type: "select", options: ["To Do", "In Progress", "Done", "Blocked"] },
     { id: "priority", name: "Priority", type: "select", options: ["High", "Medium", "Low"] },
-    { id: "owner",    name: "Owner",    type: "text" },
+    { id: "owner", name: "Owner", type: "text" },
     { id: "due_date", name: "Due Date", type: "date" },
   ],
 }, null, 2);
@@ -44,35 +44,45 @@ const MEETING_LIST_CONFIG = JSON.stringify({
   type: "database",
   viewType: "todo",
   properties: [
-    { id: "status",   name: "Status",   type: "select", options: ["To Do", "Done"] },
+    { id: "status", name: "Status", type: "select", options: ["To Do", "Done"] },
     { id: "priority", name: "Priority", type: "select", options: ["High", "Medium", "Low"] },
-    { id: "owner",    name: "Owner",    type: "text" },
+    { id: "owner", name: "Owner", type: "text" },
     { id: "due_date", name: "Due Date", type: "date" },
   ],
 }, null, 2);
 
-const MEETING_NOTES_CONTENT = JSON.stringify([
-  { id: "heading-1", type: "heading", props: { level: 1, textColor: "default", backgroundColor: "default", textAlignment: "left" }, content: [{ type: "text", text: "📅 Meeting Notes", styles: { bold: true } }], children: [] },
-  { id: "meta-date", type: "paragraph", props: { textColor: "default", backgroundColor: "default", textAlignment: "left" }, content: [{ type: "text", text: `Date: ${new Date().toLocaleDateString()}`, styles: { italic: true } }], children: [] },
-  { id: "meta-attendees", type: "paragraph", props: { textColor: "default", backgroundColor: "default", textAlignment: "left" }, content: [{ type: "text", text: "Attendees: ", styles: {} }], children: [] },
-  { id: "heading-agenda", type: "heading", props: { level: 3, textColor: "default", backgroundColor: "default", textAlignment: "left" }, content: [{ type: "text", text: "Agenda", styles: { bold: true } }], children: [] },
-  { id: "agenda-1", type: "bulletListItem", props: { textColor: "default", backgroundColor: "default", textAlignment: "left" }, content: [{ type: "text", text: "Discuss current roadmap and release plan", styles: {} }], children: [] },
-  { id: "agenda-2", type: "bulletListItem", props: { textColor: "default", backgroundColor: "default", textAlignment: "left" }, content: [{ type: "text", text: "Review blockers and outstanding tasks", styles: {} }], children: [] },
-  { id: "heading-decisions", type: "heading", props: { level: 3, textColor: "default", backgroundColor: "default", textAlignment: "left" }, content: [{ type: "text", text: "Key Decisions", styles: { bold: true } }], children: [] },
-  { id: "decision-1", type: "bulletListItem", props: { textColor: "default", backgroundColor: "default", textAlignment: "left" }, content: [{ type: "text", text: "—", styles: {} }], children: [] },
-  { id: "heading-actions", type: "heading", props: { level: 3, textColor: "default", backgroundColor: "default", textAlignment: "left" }, content: [{ type: "text", text: "Action Items", styles: { bold: true } }], children: [] },
-  { id: "action-1", type: "checkListItem", props: { checked: false, textColor: "default", backgroundColor: "default", textAlignment: "left" }, content: [{ type: "text", text: "Follow up on open items", styles: {} }], children: [] },
-], null, 2);
+const getMeetingNotesContent = () => {
+  const now = new Date();
+  const hours = now.getHours();
+  const minutes = now.getMinutes().toString().padStart(2, "0");
+  const ampm = hours >= 12 ? "PM" : "AM";
+  const hour12 = hours % 12 || 12;
+  const timeStr = `${hour12}:${minutes} ${ampm}`;
+  const dateLabel = `@Today  ${timeStr}`;
+
+  return JSON.stringify([
+    { id: "heading-1", type: "heading", props: { level: 1, textColor: "default", backgroundColor: "default", textAlignment: "left" }, content: [{ type: "text", text: "\uD83D\uDCC5 Meeting Notes", styles: { bold: true } }], children: [] },
+    { id: "meta-date", type: "paragraph", props: { textColor: "default", backgroundColor: "default", textAlignment: "left" }, content: [{ type: "text", text: `Date: ${dateLabel}`, styles: { italic: true } }], children: [] },
+    { id: "meta-attendees", type: "paragraph", props: { textColor: "default", backgroundColor: "default", textAlignment: "left" }, content: [{ type: "text", text: "Attendees: ", styles: {} }], children: [] },
+    { id: "heading-agenda", type: "heading", props: { level: 3, textColor: "default", backgroundColor: "default", textAlignment: "left" }, content: [{ type: "text", text: "Agenda", styles: { bold: true } }], children: [] },
+    { id: "agenda-1", type: "bulletListItem", props: { textColor: "default", backgroundColor: "default", textAlignment: "left" }, content: [{ type: "text", text: "Discuss current roadmap and release plan", styles: {} }], children: [] },
+    { id: "agenda-2", type: "bulletListItem", props: { textColor: "default", backgroundColor: "default", textAlignment: "left" }, content: [{ type: "text", text: "Review blockers and outstanding tasks", styles: {} }], children: [] },
+    { id: "heading-decisions", type: "heading", props: { level: 3, textColor: "default", backgroundColor: "default", textAlignment: "left" }, content: [{ type: "text", text: "Key Decisions", styles: { bold: true } }], children: [] },
+    { id: "decision-1", type: "bulletListItem", props: { textColor: "default", backgroundColor: "default", textAlignment: "left" }, content: [{ type: "text", text: "\u2014", styles: {} }], children: [] },
+    { id: "heading-actions", type: "heading", props: { level: 3, textColor: "default", backgroundColor: "default", textAlignment: "left" }, content: [{ type: "text", text: "Action Items", styles: { bold: true } }], children: [] },
+    { id: "action-1", type: "checkListItem", props: { checked: false, textColor: "default", backgroundColor: "default", textAlignment: "left" }, content: [{ type: "text", text: "Follow up on open items", styles: {} }], children: [] },
+  ], null, 2);
+};
 
 const PROJECT_TABLE_CONFIG = JSON.stringify({
   type: "database",
   viewType: "table",
   properties: [
-    { id: "status",    name: "Status",    type: "select",  options: ["To Do", "In Progress", "Done"] },
-    { id: "priority",  name: "Priority",  type: "select",  options: ["High", "Medium", "Low"] },
-    { id: "due_date",  name: "Due Date",  type: "date" },
-    { id: "progress",  name: "Progress",  type: "select",  options: ["0%", "25%", "50%", "75%", "100%"] },
-    { id: "tags",      name: "Tags",      type: "multiselect", options: ["Frontend", "Backend", "Design", "QA", "Docs"] },
+    { id: "status", name: "Status", type: "select", options: ["To Do", "In Progress", "Done"] },
+    { id: "priority", name: "Priority", type: "select", options: ["High", "Medium", "Low"] },
+    { id: "due_date", name: "Due Date", type: "date" },
+    { id: "progress", name: "Progress", type: "select", options: ["0%", "25%", "50%", "75%", "100%"] },
+    { id: "tags", name: "Tags", type: "multiselect", options: ["Frontend", "Backend", "Design", "QA", "Docs"] },
   ],
 }, null, 2);
 
@@ -86,9 +96,9 @@ const GOALS_CONFIG = JSON.stringify({
   type: "database",
   viewType: "table",
   properties: [
-    { id: "status",     name: "Status",    type: "select", options: ["Not Started", "On Track", "Behind", "Achieved"] },
-    { id: "timeframe",  name: "Timeframe", type: "select", options: ["Q1", "Q2", "Q3", "Q4", "H1", "H2", "Yearly"] },
-    { id: "target_date",name: "Target Date", type: "date" },
+    { id: "status", name: "Status", type: "select", options: ["Not Started", "On Track", "Behind", "Achieved"] },
+    { id: "timeframe", name: "Timeframe", type: "select", options: ["Q1", "Q2", "Q3", "Q4", "H1", "H2", "Yearly"] },
+    { id: "target_date", name: "Target Date", type: "date" },
   ],
 }, null, 2);
 
@@ -96,9 +106,28 @@ const BRAINSTORM_CONFIG = JSON.stringify({
   type: "database",
   viewType: "board",
   properties: [
-    { id: "status",   name: "Status",   type: "select", options: ["Idea", "Researching", "Approved", "Rejected"] },
-    { id: "votes",    name: "Votes",    type: "number" },
+    { id: "status", name: "Status", type: "select", options: ["Idea", "Researching", "Approved", "Rejected"] },
+    { id: "votes", name: "Votes", type: "number" },
     { id: "category", name: "Category", type: "select", options: ["Product", "Design", "Marketing", "Growth"] },
+  ],
+}, null, 2);
+
+const GALLERY_CONFIG = JSON.stringify({
+  type: "database",
+  viewType: "gallery",
+  properties: [
+    { id: "status", name: "Status", type: "select", options: ["Active", "Draft", "Archived"] },
+    { id: "tags", name: "Tags", type: "multiselect", options: ["Design", "Dev", "Marketing"] },
+  ],
+}, null, 2);
+
+const FORM_CONFIG = JSON.stringify({
+  type: "database",
+  viewType: "form",
+  properties: [
+    { id: "name", name: "Name", type: "text" },
+    { id: "email", name: "Email", type: "email" },
+    { id: "feedback", name: "Feedback", type: "text" },
   ],
 }, null, 2);
 
@@ -116,7 +145,9 @@ type TemplateId =
   | "action-table"
   | "team-wiki"
   | "roadmap"
-  | "general";
+  | "general"
+  | "gallery"
+  | "form";
 
 interface TemplateCard {
   id: TemplateId;
@@ -127,11 +158,11 @@ interface TemplateCard {
   bgFrom: string;              // tailwind gradient start
   bgTo: string;                // tailwind gradient end
   borderColor: string;
-  previewType: "table" | "board" | "document" | "todo";
+  previewType: "table" | "board" | "document" | "todo" | "gallery" | "form";
   previewCols: string[];
   previewBadges?: { label: string; color: string }[];
   content: string;
-  type: "table" | "board" | "todo" | "document";
+  type: "table" | "board" | "todo" | "document" | "form";
   icon?: string;
 }
 
@@ -156,11 +187,11 @@ const Avatar = ({ seed }: { seed: number }) => {
 
 const StatusBadge = ({ label, color }: { label: string; color: string }) => {
   const colorMap: Record<string, string> = {
-    green:  "bg-green-500/20 text-green-400 border border-green-500/30",
-    blue:   "bg-blue-500/20 text-blue-400 border border-blue-500/30",
-    gray:   "bg-white/10 text-white/50 border border-white/10",
-    red:    "bg-red-500/20 text-red-400 border border-red-500/30",
-    amber:  "bg-amber-500/20 text-amber-400 border border-amber-500/30",
+    green: "bg-green-500/20 text-green-400 border border-green-500/30",
+    blue: "bg-blue-500/20 text-blue-400 border border-blue-500/30",
+    gray: "bg-white/10 text-white/50 border border-white/10",
+    red: "bg-red-500/20 text-red-400 border border-red-500/30",
+    amber: "bg-amber-500/20 text-amber-400 border border-amber-500/30",
     purple: "bg-purple-500/20 text-purple-400 border border-purple-500/30",
   };
   return (
@@ -172,11 +203,11 @@ const StatusBadge = ({ label, color }: { label: string; color: string }) => {
 
 const LightStatusBadge = ({ label, color }: { label: string; color: string }) => {
   const colorMap: Record<string, string> = {
-    green:  "bg-green-100 text-green-700 border border-green-200",
-    blue:   "bg-blue-100 text-blue-700 border border-blue-200",
-    gray:   "bg-gray-100 text-gray-500 border border-gray-200",
-    red:    "bg-red-100 text-red-600 border border-red-200",
-    amber:  "bg-amber-100 text-amber-700 border border-amber-200",
+    green: "bg-green-100 text-green-700 border border-green-200",
+    blue: "bg-blue-100 text-blue-700 border border-blue-200",
+    gray: "bg-gray-100 text-gray-500 border border-gray-200",
+    red: "bg-red-100 text-red-600 border border-red-200",
+    amber: "bg-amber-100 text-amber-700 border border-amber-200",
     purple: "bg-purple-100 text-purple-700 border border-purple-200",
   };
   return (
@@ -275,6 +306,57 @@ const DocumentPreview = ({
   </div>
 );
 
+const GalleryPreview = ({
+  emoji, label, accentColor, isDark,
+}: {
+  emoji: string; label: string; accentColor: string; isDark: boolean;
+}) => (
+  <div
+    className={`rounded-md overflow-hidden border ${isDark ? "border-white/10" : "border-black/8 bg-white"}`}
+    style={isDark ? { background: accentColor } : undefined}
+  >
+    <div className={`flex items-center gap-1 px-2 py-1.5 border-b ${isDark ? "border-white/10" : "border-black/8"}`}>
+      <span className="text-xs">{emoji}</span>
+      <span className={`text-[10px] font-semibold ${isDark ? "text-white" : "text-gray-800"}`}>{label}</span>
+    </div>
+    <div className="grid grid-cols-2 gap-1.5 p-2">
+      {[0, 1].map((i) => (
+        <div key={i} className={`border rounded-md p-1 flex flex-col gap-1 ${isDark ? "border-white/10 bg-white/5" : "border-black/5 bg-gray-50"}`}>
+          <div className="h-6 w-full rounded bg-gradient-to-r from-blue-400/20 to-violet-400/20" />
+          {isDark ? <Bar w="70%" /> : <LightBar w="70%" />}
+        </div>
+      ))}
+    </div>
+  </div>
+);
+
+const FormPreview = ({
+  emoji, label, accentColor, isDark,
+}: {
+  emoji: string; label: string; accentColor: string; isDark: boolean;
+}) => (
+  <div
+    className={`rounded-md overflow-hidden border ${isDark ? "border-white/10" : "border-black/8 bg-white"}`}
+    style={isDark ? { background: accentColor } : undefined}
+  >
+    <div className={`flex items-center gap-1 px-2 py-1.5 border-b ${isDark ? "border-white/10" : "border-black/8"}`}>
+      <span className="text-xs">{emoji}</span>
+      <span className={`text-[10px] font-semibold ${isDark ? "text-white" : "text-gray-800"}`}>{label}</span>
+    </div>
+    <div className="p-2 space-y-1.5">
+      <div className="space-y-0.5">
+        <div className="h-1 w-6 rounded bg-white/40" />
+        <div className={`h-3 w-full rounded border ${isDark ? "border-white/10 bg-white/5" : "border-black/5 bg-gray-50"}`} />
+      </div>
+      <div className="space-y-0.5">
+        <div className="h-1 w-8 rounded bg-white/40" />
+        <div className={`h-3 w-full rounded border ${isDark ? "border-white/10 bg-white/5" : "border-black/5 bg-gray-50"}`} />
+      </div>
+      <div className={`h-4 w-12 rounded bg-blue-500 mx-auto`} />
+    </div>
+  </div>
+);
+
 /* ─────────────────────────── template data ─────────────────────────── */
 
 const TEMPLATES: TemplateCard[] = [
@@ -305,8 +387,8 @@ const TEMPLATES: TemplateCard[] = [
     previewType: "table",
     previewCols: ["Task name", "Status", "Assignee"],
     previewBadges: [
-      { label: "Not started", color: "gray" },
-      { label: "In progress", color: "blue" },
+      { label: "started", color: "gray" },
+      { label: "progress", color: "blue" },
       { label: "Done", color: "green" },
     ],
     content: MEETING_TABLE_CONFIG,
@@ -360,9 +442,9 @@ const TEMPLATES: TemplateCard[] = [
     previewType: "table",
     previewCols: ["Idea", "Created by", "Priority"],
     previewBadges: [
-      { label: "High",   color: "red" },
+      { label: "High", color: "red" },
       { label: "Medium", color: "amber" },
-      { label: "Low",    color: "green" },
+      { label: "Low", color: "green" },
     ],
     content: BRAINSTORM_CONFIG,
     type: "board",
@@ -372,16 +454,16 @@ const TEMPLATES: TemplateCard[] = [
     id: "meeting-notes",
     label: "Meeting Notes",
     desc: "Turn meetings into action.",
-    emoji: "📅",
+    emoji: "\uD83D\uDCC5",
     accentColor: "#1a2a20",
     bgFrom: "from-[#101e16]",
     bgTo: "to-[#16271c]",
     borderColor: "border-emerald-900/60",
     previewType: "document",
     previewCols: ["Topic", "Owner", "Date"],
-    content: MEETING_NOTES_CONTENT,
+    content: "",
     type: "document",
-    icon: "📅",
+    icon: "\uD83D\uDCC5",
   },
   {
     id: "goals",
@@ -395,13 +477,43 @@ const TEMPLATES: TemplateCard[] = [
     previewType: "table",
     previewCols: ["Goal", "Status", "Timeframe"],
     previewBadges: [
-      { label: "On Track", color: "green" },
-      { label: "Behind",   color: "red" },
+      { label: "Track", color: "green" },
+      { label: "Behind", color: "red" },
       { label: "Achieved", color: "blue" },
     ],
     content: GOALS_CONFIG,
     type: "table",
     icon: "🏁",
+  },
+  {
+    id: "gallery",
+    label: "Gallery Board",
+    desc: "Display visual cards with image previews.",
+    emoji: "🖼️",
+    accentColor: "#2c1a35",
+    bgFrom: "from-[#1d0e25]",
+    bgTo: "to-[#271432]",
+    borderColor: "border-purple-900/60",
+    previewType: "gallery",
+    previewCols: ["Name", "Status", "Tags"],
+    content: GALLERY_CONFIG,
+    type: "table",
+    icon: "🖼️",
+  },
+  {
+    id: "form",
+    label: "Form",
+    desc: "Collect responses with a clean public form.",
+    emoji: "📋",
+    accentColor: "#2a1f3d",
+    bgFrom: "from-[#1a102e]",
+    bgTo: "to-[#251b3a]",
+    borderColor: "border-violet-900/60",
+    previewType: "form",
+    previewCols: ["Name", "Email", "Feedback"],
+    content: FORM_CONFIG,
+    type: "form",
+    icon: "📋",
   },
 ];
 
@@ -441,6 +553,26 @@ const TemplateCardUI = ({
         />
       );
     }
+    if (tmpl.previewType === "gallery") {
+      return (
+        <GalleryPreview
+          emoji={tmpl.emoji}
+          label={tmpl.label}
+          accentColor={tmpl.accentColor}
+          isDark={isDark}
+        />
+      );
+    }
+    if (tmpl.previewType === "form") {
+      return (
+        <FormPreview
+          emoji={tmpl.emoji}
+          label={tmpl.label}
+          accentColor={tmpl.accentColor}
+          isDark={isDark}
+        />
+      );
+    }
     return (
       <TablePreview
         emoji={tmpl.emoji}
@@ -453,9 +585,22 @@ const TemplateCardUI = ({
     );
   };
 
-  // Dark card: gradient bg. Light card: white bg with subtle colored left border accent.
+  const LIGHT_GRADIENTS: Record<string, { from: string; to: string; border: string }> = {
+    general: { from: "from-neutral-50", to: "to-neutral-100/70", border: "border-neutral-200" },
+    tasks: { from: "from-emerald-50/50", to: "to-emerald-100/40", border: "border-emerald-200" },
+    projects: { from: "from-blue-50/50", to: "to-blue-100/40", border: "border-blue-200" },
+    "document-hub": { from: "from-rose-50/50", to: "to-rose-100/40", border: "border-rose-200" },
+    brainstorm: { from: "from-amber-50/50", to: "to-amber-100/40", border: "border-amber-200" },
+    "meeting-notes": { from: "from-teal-50/50", to: "to-teal-100/40", border: "border-teal-200" },
+    goals: { from: "from-indigo-50/50", to: "to-indigo-100/40", border: "border-indigo-200" },
+    gallery: { from: "from-purple-50/50", to: "to-purple-100/40", border: "border-purple-200" },
+    form: { from: "from-violet-50/50", to: "to-violet-100/40", border: "border-violet-200" },
+  };
+
+  // Dark card: gradient bg. Light card: soft pastel gradient bg.
   const darkCard = `bg-gradient-to-br ${tmpl.bgFrom} ${tmpl.bgTo} ${tmpl.borderColor} text-white`;
-  const lightCard = `bg-white border-gray-200 hover:border-gray-300 hover:shadow-md text-gray-900`;
+  const lightGrad = LIGHT_GRADIENTS[tmpl.id] || LIGHT_GRADIENTS.general;
+  const lightCard = `bg-gradient-to-br ${lightGrad.from} ${lightGrad.to} ${lightGrad.border} hover:shadow-md text-gray-900`;
 
   return (
     <button
@@ -463,16 +608,16 @@ const TemplateCardUI = ({
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       className={`
-        relative group text-left rounded-xl border p-4 transition-all duration-200 flex gap-3 items-start h-[135px] w-full overflow-hidden
+        relative group text-left rounded-xl border p-4 transition-all duration-200 flex gap-3 items-start h-[160px] w-full overflow-hidden
         ${isDark ? darkCard : lightCard}
         ${hovered ? "scale-[1.015] shadow-xl" : "scale-100"}
       `}
     >
       {/* Left: title + desc */}
-      <div className="flex flex-col justify-start min-w-0 flex-shrink-0 w-[130px] sm:w-[145px] h-full overflow-y-auto scrollbar-none">
+      <div className="flex flex-col justify-start min-w-0 flex-shrink-0 w-[180px] sm:w-[220px] h-full overflow-y-auto scrollbar-none">
         <span className="text-xl mb-1 shrink-0">{tmpl.emoji}</span>
-        <h3 className={`text-[12px] font-bold leading-tight truncate ${isDark ? "text-white" : "text-gray-900"}`}>{tmpl.label}</h3>
-        <p className={`text-[10px] mt-1 leading-normal text-ellipsis ${isDark ? "text-white/50" : "text-gray-400"}`}>{tmpl.desc}</p>
+        <h3 className={`text-[12px] font-bold leading-tight ${isDark ? "text-white" : "text-gray-900"}`}>{tmpl.label}</h3>
+        <p className={`text-[10px] mt-1 leading-normal line-clamp-2 ${isDark ? "text-white/50" : "text-gray-400"}`}>{tmpl.desc}</p>
       </div>
 
       {/* Right: mini preview — fills remaining space */}
@@ -491,7 +636,7 @@ export const TemplatesModal = () => {
   const create = useMutation(api.documents.create);
   const updateDocument = useMutation(api.documents.update);
   const { theme, setTheme, resolvedTheme } = useTheme();
-  
+
   const isDark = resolvedTheme === "dark";
 
   const handleSelect = async (tmpl: TemplateCard) => {
@@ -506,6 +651,9 @@ export const TemplatesModal = () => {
       title = "My Brainstorm";
     }
 
+    // For meeting notes, generate fresh content with current date/time.
+    const content = tmpl.id === "meeting-notes" ? getMeetingNotesContent() : tmpl.content;
+
     const promise = create({
       title,
       parentDocument: parentId,
@@ -513,7 +661,7 @@ export const TemplatesModal = () => {
       await updateDocument({
         id: newId,
         icon: tmpl.icon,
-        ...(tmpl.content ? { content: tmpl.content } : {}),
+        ...(content ? { content } : {}),
       });
       templatesModal.onClose();
       router.push(`/documents/${newId}`);
@@ -541,7 +689,7 @@ export const TemplatesModal = () => {
       <DialogDescription className="sr-only">
         Choose a template type to create your new page.
       </DialogDescription>
-      <DialogContent className={`max-w-5xl w-[95vw] md:w-[1000px] h-[85vh] md:h-[600px] p-0 overflow-hidden border-0 shadow-2xl transition-colors duration-300 ${modalBg}`}>
+      <DialogContent className={`max-w-7xl w-[95vw] sm:max-w-[1200px] md:w-[1200px] h-[85vh] md:h-[700px] p-0 overflow-hidden border-0 shadow-2xl transition-colors duration-300 ${modalBg}`}>
         <div className={`flex flex-col h-full overflow-y-auto md:overflow-hidden ${modalBg} transition-colors duration-300`}>
 
           {/* Header */}
@@ -558,7 +706,7 @@ export const TemplatesModal = () => {
           </div>
 
           {/* Grid — responsive columns */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 p-4 md:p-6 overflow-y-auto flex-1 custom-scrollbar">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 p-4 md:p-6 overflow-y-auto flex-1 custom-scrollbar">
             {TEMPLATES.map((tmpl) => (
               <TemplateCardUI
                 key={tmpl.id}

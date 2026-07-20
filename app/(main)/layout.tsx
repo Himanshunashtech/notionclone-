@@ -7,6 +7,8 @@ import { useRouter, usePathname } from "next/navigation";
 import Navigation from "./_components/Navigation";
 import { SearchCommand } from "@/components/search-command";
 
+import { MentionModalProvider } from "@/hooks/useMentionModal";
+
 const MainLayout = ({ children }: { children: React.ReactNode }) => {
   const { isAuthenticated, isLoading } = useConvexAuth();
   const router = useRouter();
@@ -33,13 +35,15 @@ const MainLayout = ({ children }: { children: React.ReactNode }) => {
   const isCalendar = pathname === "/calendar";
 
   return (
-    <div className="dark:bg-dark flex h-full">
-      {!isCalendar && <Navigation />}
-      <main className="h-full flex-1 overflow-y-auto">
-        <SearchCommand />
-        {children}
-      </main>
-    </div>
+    <MentionModalProvider>
+      <div className="dark:bg-dark flex h-full">
+        {!isCalendar && <Navigation />}
+        <main className="h-full flex-1 overflow-y-auto">
+          <SearchCommand />
+          {children}
+        </main>
+      </div>
+    </MentionModalProvider>
   );
 };
 export default MainLayout;

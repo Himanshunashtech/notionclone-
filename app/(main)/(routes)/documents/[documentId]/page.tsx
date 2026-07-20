@@ -842,7 +842,7 @@ const DocumentIdPage = ({ params }: DocumentIdPageProps) => {
             </div>
             {isMeetingPage && (
               <div className="pt-6 border-t border-neutral-200 dark:border-neutral-800">
-                <MeetingTranscription meetingTitle={doc.title || "Untitled"} />
+                <MeetingTranscription meetingTitle={doc.title || "Untitled"} documentId={documentId} />
               </div>
             )}
           </div>
@@ -907,6 +907,7 @@ const DocumentIdPage = ({ params }: DocumentIdPageProps) => {
               <>
                 <Editor
                   key={documentId}
+                  documentId={documentId}
                   onChange={onChange}
                   initialContent={doc.content}
                   smallText={isSmallText}

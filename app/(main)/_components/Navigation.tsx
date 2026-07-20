@@ -54,6 +54,7 @@ import { FavoritesList } from "./FavoritesList";
 import { ActionTooltip } from "@/components/action-tooltip";
 import { useFocusMode } from "@/hooks/useFocusMode";
 import NavDrawer from "./NavDrawer";
+import { CalendarHoverPanel } from "./CalendarHoverPanel";
 
 const Navigation = () => {
   const params = useParams();
@@ -538,7 +539,9 @@ const Navigation = () => {
           />
           <Item label="Settings" icon={Settings} onClick={settings.onOpen} />
           <Item onClick={() => router.push("/library")} label="Library" icon={LibraryIcon} />
-          <Item onClick={() => router.push("/calendar")} label="Calendar" icon={Calendar} />
+          <CalendarHoverPanel>
+            <Item onClick={() => router.push("/calendar")} label="Calendar" icon={Calendar} />
+          </CalendarHoverPanel>
           <Item onClick={handleCreate} label="New page" icon={PlusCircle} />
         </div>
         <div className="mt-4 flex-1 min-h-0 flex flex-col">

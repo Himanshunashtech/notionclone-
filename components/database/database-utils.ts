@@ -25,9 +25,9 @@ export interface DatabaseProperty {
 
 export interface DatabaseConfig {
   type: "database";
-  viewType: "table" | "board" | "todo" | "document" | "calendar" | "timeline" | "chart";
+  viewType: "table" | "board" | "todo" | "document" | "calendar" | "timeline" | "chart" | "gallery" | "form";
   properties: DatabaseProperty[];
-  views?: ("table" | "board" | "todo" | "document" | "calendar" | "timeline" | "chart")[];
+  views?: ("table" | "board" | "todo" | "document" | "calendar" | "timeline" | "chart" | "gallery" | "form")[];
 }
 
 export interface DatabaseComment {

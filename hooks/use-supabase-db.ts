@@ -83,7 +83,7 @@ export function useMutation<K extends keyof DbMutations>(
 
   const mutate = useCallback(
     async (args: any) => {
-      if (!userId) {
+      if (!userId && mutationKey !== "create") {
         throw new Error("Not authenticated");
       }
 
@@ -92,7 +92,7 @@ export function useMutation<K extends keyof DbMutations>(
         throw new Error(`Mutation ${mutationKey} not found in dbMutations`);
       }
 
-      const result = await (mutationFn as any)(userId, args);
+      const result = await (mutationFn as any)(userId || null, args);
 
       // Emit mutation event to notify all active queries to refresh
       dbBus.emit("mutation");

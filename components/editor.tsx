@@ -19,6 +19,7 @@ import { codeBlockOptions } from "@blocknote/code-block";
 import "@blocknote/core/style.css";
 import "@blocknote/mantine/style.css";
 import { Doc } from "@/lib/supabase-db";
+import { useMentionModal } from "@/hooks/useMentionModal";
 
 interface EditorProps {
   onChange: (value: string) => void;
@@ -27,6 +28,7 @@ interface EditorProps {
   editorFont?: string;
   smallText?: boolean;
   onEditorReady?: (editor: BlockNoteEditor) => void;
+  documentId?: string;
 }
 
 const schema = BlockNoteSchema.create().extend({
@@ -66,6 +68,34 @@ const getMediaUrls = (editor: BlockNoteEditor): Set<string> => {
   });
 
   return urls;
+};
+
+const ALLOWED_BLOCK_TYPES = new Set([
+  "paragraph",
+  "heading",
+  "bulletListItem",
+  "numberedListItem",
+  "checkListItem",
+  "table",
+  "image",
+  "video",
+  "audio",
+  "file",
+  "codeBlock",
+]);
+
+const sanitizeBlocks = (blocks: any[]): any[] => {
+  return blocks
+    .filter((block) => block && typeof block === "object" && ALLOWED_BLOCK_TYPES.has(block.type))
+    .map((block) => {
+      if (block.children && Array.isArray(block.children)) {
+        return {
+          ...block,
+          children: sanitizeBlocks(block.children),
+        };
+      }
+      return block;
+    });
 };
 
 const Editor = ({
@@ -141,7 +171,7 @@ const Editor = ({
         const parsed = JSON.parse(initialContent);
         // BlockNote requires a non-empty array of blocks — guard against database JSON objects
         if (!Array.isArray(parsed) || parsed.length === 0) return undefined;
-        return parsed as PartialBlock[];
+        return sanitizeBlocks(parsed) as PartialBlock[];
       } catch {
         return undefined;
       }
@@ -228,6 +258,32 @@ const Editor = ({
     editor.focus();
   };
 
+  const mentionModal = useMentionModal();
+
+  const handleEditorKeyDown = (e: React.KeyboardEvent) => {
+    // If the provider isn't wrapping this editor or is a dummy fallback, let user type '@' normally
+    if (e.key === "@") {
+      const mentionModalExt = mentionModal as any;
+      if (mentionModalExt.isFallback) return;
+
+      e.preventDefault();
+      mentionModal.onOpen((item) => {
+        const path = item.type === "page" ? `/documents/${item.id}` : item.type === "event" ? "/calendar" : "";
+        const style = item.type === "person" ? { bold: true } : { italic: true };
+        
+        // Focus back to editor before inserting content
+        editor.focus();
+        editor.insertInlineContent([
+          {
+            type: "link",
+            href: path || "#",
+            content: [{ type: "text", text: `@${item.title}`, styles: style }],
+          }
+        ]);
+      });
+    }
+  };
+
   return (
     <div
       ref={wrapperRef}
@@ -238,6 +294,7 @@ const Editor = ({
           "--editor-font-size": smallText ? "15px" : "16px",
         } as React.CSSProperties
       }
+      onKeyDown={handleEditorKeyDown}
       onDropCapture={handleCapture}
       onDragOverCapture={handleCapture}
       onMouseDown={handleMouseDown}

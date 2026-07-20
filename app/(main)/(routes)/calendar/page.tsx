@@ -537,9 +537,9 @@ export default function CalendarPage() {
 
       {/* 1. LEFT SIDEBAR */}
       <aside className={cn(
-        "w-[260px] border-r border-neutral-200 dark:border-neutral-800 flex flex-col p-4 space-y-6 shrink-0 bg-neutral-50/30 dark:bg-neutral-900/10 transition-all duration-300 z-50",
+        "w-[260px] border-r border-neutral-200 dark:border-neutral-800 flex flex-col p-4 space-y-6 shrink-0 bg-secondary transition-all duration-300 z-50",
         isMobile 
-          ? (showLeftSidebar ? "fixed inset-y-0 left-0 bg-white dark:bg-neutral-900 shadow-2xl w-[280px]" : "fixed inset-y-0 -left-[280px] w-[280px]") 
+          ? (showLeftSidebar ? "fixed inset-y-0 left-0 bg-secondary shadow-2xl w-[280px]" : "fixed inset-y-0 -left-[280px] w-[280px]") 
           : "flex"
       )}>
         {/* Back Button */}
@@ -949,9 +949,9 @@ export default function CalendarPage() {
 
       {/* 3. RIGHT SIDEBAR PANE */}
       <aside className={cn(
-        "w-[240px] border-l border-neutral-200 dark:border-neutral-800 flex flex-col p-4 space-y-6 shrink-0 bg-neutral-50/30 dark:bg-neutral-900/10 transition-all duration-300 z-50",
+        "w-[240px] border-l border-neutral-200 dark:border-neutral-800 flex flex-col p-4 space-y-6 shrink-0 bg-secondary transition-all duration-300 z-50",
         isMobile 
-          ? (showRightSidebar ? "fixed inset-y-0 right-0 bg-white dark:bg-neutral-900 shadow-2xl w-[260px]" : "fixed inset-y-0 -right-[260px] w-[260px]") 
+          ? (showRightSidebar ? "fixed inset-y-0 right-0 bg-secondary shadow-2xl w-[260px]" : "fixed inset-y-0 -right-[260px] w-[260px]") 
           : "flex"
       )}>
         
@@ -970,7 +970,7 @@ export default function CalendarPage() {
         <div className="space-y-4">
           <div className="text-xs font-bold text-neutral-455 tracking-wider uppercase px-1">Upcoming</div>
           {(!events || events.length === 0) ? (
-            <div className="border border-neutral-200 dark:border-neutral-800 rounded-xl p-4 bg-white dark:bg-neutral-950/20 text-center space-y-3">
+            <div className="border border-neutral-200 dark:border-neutral-800 rounded-xl p-4 bg-secondary text-center space-y-3">
               <span className="text-3xl block">👋</span>
               <div className="text-xs font-semibold text-neutral-800 dark:text-neutral-200">No events found</div>
               <p className="text-[10px] text-neutral-400 dark:text-neutral-550 leading-relaxed">
@@ -978,7 +978,7 @@ export default function CalendarPage() {
               </p>
             </div>
           ) : (
-            <div className="border border-neutral-200 dark:border-neutral-800 rounded-xl p-4 bg-white dark:bg-neutral-950/20 space-y-3">
+            <div className="border border-neutral-200 dark:border-neutral-800 rounded-xl p-4 bg-secondary space-y-3">
               <div className="text-xs font-semibold text-neutral-800 dark:text-neutral-200">
                 <span>Next meetings</span>
               </div>
