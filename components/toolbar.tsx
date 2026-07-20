@@ -13,6 +13,7 @@ import TextareaAutosize from "react-textarea-autosize";
 import { IconPicker } from "./icon-picker";
 import { ImageIcon, Smile, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { DocumentIcon } from "./document-icon";
 import { EditorFont, useEditorFont } from "@/hooks/useEditorFont";
 import { fontFamilies } from "@/lib/editorFont";
 
@@ -106,9 +107,9 @@ export const Toolbar = ({ initialData, preview, editorFont }: ToolbarProps) => {
           )}
         >
           <IconPicker onChange={onIconSelect}>
-            <p className="text-6xl transition hover:opacity-75">
-              {initialData.icon}
-            </p>
+            <div className="text-7xl transition hover:opacity-75 flex items-center justify-center">
+              <DocumentIcon icon={initialData.icon} className="h-20 w-20 text-7xl" />
+            </div>
           </IconPicker>
           <Button
             onClick={onRemoveIcon}
@@ -121,15 +122,15 @@ export const Toolbar = ({ initialData, preview, editorFont }: ToolbarProps) => {
         </div>
       )}
       {!!initialData.icon && preview && (
-        <p
+        <div
           className={cn(
-            "text-6xl",
+            "text-7xl flex items-center justify-start",
             !initialData.coverImage && "pt-6",
             initialData.coverImage && "-mt-8",
           )}
         >
-          {initialData.icon}
-        </p>
+          <DocumentIcon icon={initialData.icon} className="h-20 w-20 text-7xl" />
+        </div>
       )}
       <div className="flex items-center gap-x-1 py-2 group-hover:opacity-100 md:opacity-0">
         {!initialData.icon && !preview && (

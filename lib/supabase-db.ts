@@ -123,6 +123,8 @@ const mapDocument = (row: any): DocumentRow => {
     fullWidth: row.full_width,
     smallText: row.small_text,
     showToc: row.show_toc,
+    content: row.content || undefined,
+    icon: row.icon || undefined,
   };
 };
 
@@ -165,6 +167,7 @@ export const api = {
     getSearch: "getSearch" as const,
     searchDocuments: "searchDocuments" as const,
     getById: "getById" as const,
+    getAncestors: "getAncestors" as const,
     removeIcon: "removeIcon" as const,
     removeCoverImage: "removeCoverImage" as const,
     reorder: "reorder" as const,
@@ -310,6 +313,46 @@ const rawDbQueries = {
     }
 
     return document;
+  },
+
+  getAncestors: async (userId: string | null, args: { documentId: string }) => {
+    if (!args.documentId) return [];
+
+    const { data: currentDoc, error } = await supabase
+      .from("documents")
+      .select("*")
+      .eq("id", args.documentId)
+      .single();
+
+    if (error || !currentDoc) return [];
+
+    const path: DocumentRow[] = [];
+    let current = currentDoc;
+
+    for (let i = 0; i < 10; i++) {
+      const doc = mapDocument(current);
+      
+      const isPublic = doc.isPublished && !doc.isArchived;
+      const isAuthorized = userId && doc.userId === userId;
+      if (!isPublic && !isAuthorized) {
+        break;
+      }
+
+      path.unshift(doc);
+
+      if (!current.parent_document) break;
+
+      const { data: parentDoc, error: parentError } = await supabase
+        .from("documents")
+        .select("*")
+        .eq("id", current.parent_document)
+        .single();
+
+      if (parentError || !parentDoc) break;
+      current = parentDoc;
+    }
+
+    return path;
   },
 
   getFavorites: async (userId: string) => {

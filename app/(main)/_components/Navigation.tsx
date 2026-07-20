@@ -449,7 +449,7 @@ const Navigation = () => {
     if (!isResizingRef.current) return;
     let newWidth = e.clientX;
 
-    if (newWidth < 240) newWidth = 240;
+    if (newWidth < 280) newWidth = 280;
     if (newWidth > 480) newWidth = 480;
 
     if (sidebarRef.current && navbarRef.current) {
@@ -474,15 +474,15 @@ const Navigation = () => {
       setIsResetting(true);
       setTimeout(() => {
         if (sidebarRef.current && navbarRef.current) {
-          sidebarRef.current.style.width = isMobile ? "100%" : "240px";
+          sidebarRef.current.style.width = isMobile ? "100%" : "280px";
           navbarRef.current.style.removeProperty("width");
           navbarRef.current.style.setProperty(
             "width",
-            isMobile ? "0" : "calc(100%-240px)",
+            isMobile ? "0" : "calc(100% - 280px)",
           );
           navbarRef.current.style.setProperty(
             "left",
-            isMobile ? "100%" : "240px",
+            isMobile ? "100%" : "280px",
           );
         }
       }, 0);
@@ -511,7 +511,7 @@ const Navigation = () => {
       <aside
         ref={sidebarRef}
         className={cn(
-          "group/sidebar bg-secondary relative z-300 flex h-full w-60 flex-col overflow-hidden overflow-x-hidden pb-4",
+          "group/sidebar bg-secondary relative z-300 flex h-full w-[280px] flex-col overflow-hidden overflow-x-hidden pb-4",
           isResetting && "transition-all duration-300 ease-in-out",
           isMobile && "w-0",
         )}
@@ -713,7 +713,7 @@ const Navigation = () => {
         onMouseEnter={() => setIsNavbarHovered(true)}
         onMouseLeave={() => setIsNavbarHovered(false)}
         className={cn(
-          "absolute top-0 left-60 z-40 w-[calc(100%-240px)]",
+          "absolute top-0 left-[280px] z-40 w-[calc(100%-280px)]",
           !isResizingRef.current && "transition-all duration-300 ease-in-out",
           isMobile && "left-0 w-full",
         )}

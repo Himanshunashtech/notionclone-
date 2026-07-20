@@ -14,7 +14,7 @@ import { SubpagesList } from "@/components/subpages-list";
 import { EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { isDatabase } from "@/components/database/database-utils";
+import { isDatabase, isDatabaseRow, parseDatabaseRow } from "@/components/database/database-utils";
 import { DatabaseView } from "@/components/database/DatabaseView";
 
 interface DocumentIdPageProps {
@@ -112,7 +112,7 @@ const DocumentIdPage = ({ params }: DocumentIdPageProps) => {
             documentId={documentId}
             editable={false}
             onChange={onChange}
-            initialContent={document.content}
+            initialContent={isDatabaseRow(document.content) ? (parseDatabaseRow(document.content).editorContent || "") : document.content}
             editorFont={document.editorFont ?? "default"}
           />
         )}

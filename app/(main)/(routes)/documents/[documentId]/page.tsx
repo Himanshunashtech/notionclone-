@@ -15,7 +15,7 @@ import { BlockNoteEditor } from "@blocknote/core";
 import { TableOfContents } from "@/components/table-of-contents";
 import { useEditorFont } from "@/hooks/useEditorFont";
 import { SubpagesList } from "@/components/subpages-list";
-import { isDatabase, parseDatabaseConfig, parseDatabaseRow } from "@/components/database/database-utils";
+import { isDatabase, isDatabaseRow, parseDatabaseConfig, parseDatabaseRow } from "@/components/database/database-utils";
 import { DatabaseView } from "@/components/database/DatabaseView";
 import { TableView } from "@/components/database/TableView";
 import { KanbanBoard } from "@/components/database/KanbanBoard";
@@ -242,9 +242,17 @@ const DocumentIdPage = ({ params }: DocumentIdPageProps) => {
       "link[rel~='icon']",
     ) as HTMLLinkElement;
     if (link) {
-      link.href = doc.icon
-        ? `data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text x='50%' y='50%' dominant-baseline='central' text-anchor='middle' font-size='100'>${doc.icon}</text></svg>`
-        : defaultFavicon;
+      if (doc.icon) {
+        if (doc.icon.startsWith("ri:") || doc.icon.startsWith("lucide:")) {
+          const parts = doc.icon.split(":");
+          const iconColor = parts[2] || "#3b82f6";
+          link.href = `data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='40' fill='${encodeURIComponent(iconColor)}'/></svg>`;
+        } else {
+          link.href = `data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text x='50%' y='50%' dominant-baseline='central' text-anchor='middle' font-size='100'>${doc.icon}</text></svg>`;
+        }
+      } else {
+        link.href = defaultFavicon;
+      }
     }
 
     return () => {
@@ -270,10 +278,19 @@ const DocumentIdPage = ({ params }: DocumentIdPageProps) => {
 
   const createVersion = useMutation(api.documents.createVersion);
 
-  const onChange = (content: string) => {
+  const onChange = (newEditorContent: string) => {
+    let finalContent = newEditorContent;
+    if (doc && isDatabaseRow(doc.content)) {
+      const rowData = parseDatabaseRow(doc.content);
+      finalContent = JSON.stringify({
+        ...rowData,
+        editorContent: newEditorContent,
+      }, null, 2);
+    }
+
     update({
       id: documentId,
-      content,
+      content: finalContent,
     });
 
     const now = Date.now();
@@ -282,7 +299,7 @@ const DocumentIdPage = ({ params }: DocumentIdPageProps) => {
       createVersion({
         documentId,
         title: doc.title,
-        content,
+        content: finalContent,
         label: "Auto-save",
       }).catch((err) => console.error("Failed to auto-save page history:", err));
     }
@@ -522,16 +539,29 @@ const DocumentIdPage = ({ params }: DocumentIdPageProps) => {
     });
   };
 
+  const editorInitialContent = doc && isDatabaseRow(doc.content)
+    ? (parseDatabaseRow(doc.content).editorContent || "")
+    : (doc?.content || "");
+
+  const isDatabaseRowPage = !!parentDoc && (
+    isDatabase(parentDoc.content) ||
+    isTaskPage ||
+    isMeetingPage ||
+    isDocPage ||
+    isGoalPage ||
+    isProjectPage
+  );
+
   return (
     <div className="pb-35">
       <Cover url={doc.coverImage} />
       <div
-        className={`relative mx-auto md:w-[90%] ${
+        className={`relative mx-auto px-10 md:px-16 md:w-[90%] ${
           !isFullWidth ? "max-w-200" : ""
         }`}
       >
         <Toolbar initialData={doc} editorFont={activeFont} />
-        {(isTaskPage || isMeetingPage || isDocPage || isGoalPage) && parentDoc && (() => {
+        {isDatabaseRowPage && parentDoc && (() => {
           // Find if any project links this document
           let parentProjectName = "";
           let parentProjectId = "";
@@ -551,7 +581,7 @@ const DocumentIdPage = ({ params }: DocumentIdPageProps) => {
           }
 
           return (
-            <div className="space-y-6 max-w-lg mb-8 border-b border-neutral-200 dark:border-neutral-800 pb-6">
+            <div className="space-y-8 max-w-2xl mb-10 border-b border-neutral-200 dark:border-neutral-800 pb-8">
               {parentProjectName && (
                 <div className="flex items-center gap-x-2 text-xs text-neutral-500 dark:text-neutral-400 bg-neutral-100 dark:bg-neutral-850 px-3 py-2 rounded-md border border-neutral-200 dark:border-neutral-750">
                   <span className="font-semibold select-none">Project:</span>
@@ -562,7 +592,7 @@ const DocumentIdPage = ({ params }: DocumentIdPageProps) => {
                 </div>
               )}
               {/* Properties list */}
-              <div className="space-y-4">
+              <div className="space-y-5">
                 {(() => {
                   const allProps = parseDatabaseConfig(parentDoc.content).properties;
                   const visibleProps = allProps.filter((p) => {
@@ -582,7 +612,7 @@ const DocumentIdPage = ({ params }: DocumentIdPageProps) => {
                         let PropIcon = Calendar;
                         const displayType = (p as any).displayType || p.type || "";
                         if (PROPERTY_ICONS[displayType.toLowerCase()]) {
-                          PropIcon = PROPERTY_ICONS[displayType.toLowerCase()];
+                           PropIcon = PROPERTY_ICONS[displayType.toLowerCase()];
                         } else if (p.id === "status" || p.name.toLowerCase() === "status") {
                           PropIcon = ListFilter;
                         } else if (p.type === "relation") {
@@ -592,11 +622,11 @@ const DocumentIdPage = ({ params }: DocumentIdPageProps) => {
                         }
 
                         return (
-                          <div key={p.id} className="grid grid-cols-3 gap-x-4 items-center text-sm">
+                          <div key={p.id} className="grid grid-cols-3 gap-x-6 items-center text-sm md:text-base py-1.5">
                             <div className="flex items-center gap-x-2 text-muted-foreground select-none">
                               <DropdownMenu>
-                                <DropdownMenuTrigger className="flex items-center gap-x-2 text-muted-foreground select-none hover:bg-neutral-100 dark:hover:bg-neutral-800/60 px-1.5 py-0.5 rounded-md transition cursor-pointer text-left w-full outline-hidden font-medium">
-                                  <PropIcon className="h-4 w-4 shrink-0 text-neutral-500" />
+                                <DropdownMenuTrigger className="flex items-center gap-x-2 text-muted-foreground select-none hover:bg-neutral-100 dark:hover:bg-neutral-800/60 px-2 py-1 rounded-md transition cursor-pointer text-left w-full outline-hidden font-semibold">
+                                  <PropIcon className="h-4.5 w-4.5 shrink-0 text-neutral-500" />
                                   <span className="truncate">{p.name}</span>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="start" className="w-52 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-neutral-800 dark:text-neutral-200">
@@ -699,7 +729,7 @@ const DocumentIdPage = ({ params }: DocumentIdPageProps) => {
                             <div className="col-span-2">
                               {p.type === "select" ? (
                                 <DropdownMenu>
-                                  <DropdownMenuTrigger className="px-2 py-1 rounded-md text-xs font-semibold bg-neutral-100 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 border border-neutral-200 dark:border-neutral-700 hover:opacity-85 transition">
+                                  <DropdownMenuTrigger className="px-3 py-1.5 rounded-md text-sm font-semibold bg-neutral-100 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 border border-neutral-200 dark:border-neutral-700 hover:opacity-85 transition">
                                     {val || "Empty"}
                                   </DropdownMenuTrigger>
                                   <DropdownMenuContent align="start" className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-neutral-800 dark:text-neutral-200">
@@ -719,10 +749,10 @@ const DocumentIdPage = ({ params }: DocumentIdPageProps) => {
                                   type="date"
                                   value={val}
                                   onChange={(e) => handleUpdateProperty(p.id, e.target.value)}
-                                  className="px-2 py-1 text-xs rounded-md bg-transparent border border-neutral-205 dark:border-neutral-750 focus:ring-1 focus:ring-blue-500 outline-hidden dark:text-neutral-200"
+                                  className="px-3 py-1.5 text-sm rounded-md bg-transparent border border-neutral-205 dark:border-neutral-750 focus:ring-1 focus:ring-blue-500 outline-hidden dark:text-neutral-200"
                                 />
                               ) : p.type === "relation" ? (
-                                <div className="text-xs text-neutral-700 dark:text-neutral-300">
+                                <div className="text-sm text-neutral-700 dark:text-neutral-300">
                                   {val ? (
                                     <span className="px-2 py-1 rounded-md bg-neutral-100 dark:bg-neutral-850 font-medium">
                                       {rootDocs?.find((d) => d._id === val)?.title || val}
@@ -736,7 +766,7 @@ const DocumentIdPage = ({ params }: DocumentIdPageProps) => {
                                   type="checkbox"
                                   checked={val === "true"}
                                   onChange={(e) => handleUpdateProperty(p.id, e.target.checked ? "true" : "false")}
-                                  className="h-4 w-4 rounded-sm border border-neutral-205 dark:border-neutral-750 text-blue-600 focus:ring-1 focus:ring-blue-500 cursor-pointer"
+                                  className="h-5 w-5 rounded-sm border border-neutral-205 dark:border-neutral-750 text-blue-600 focus:ring-1 focus:ring-blue-500 cursor-pointer"
                                 />
                               ) : (
                                 <input
@@ -744,7 +774,7 @@ const DocumentIdPage = ({ params }: DocumentIdPageProps) => {
                                   value={val}
                                   onChange={(e) => handleUpdateProperty(p.id, e.target.value)}
                                   placeholder="Empty"
-                                  className="w-full px-2 py-1 text-xs rounded-md bg-transparent border border-transparent hover:border-neutral-200 dark:hover:border-neutral-750 focus:border-neutral-200 dark:focus:border-neutral-750 focus:ring-1 focus:ring-blue-500 outline-hidden dark:text-neutral-200"
+                                  className="w-full px-3 py-1.5 text-sm rounded-md bg-transparent border border-transparent hover:border-neutral-200 dark:hover:border-neutral-750 focus:border-neutral-200 dark:focus:border-neutral-750 focus:ring-1 focus:ring-blue-500 outline-hidden dark:text-neutral-200"
                                 />
                               )}
                             </div>
@@ -771,7 +801,7 @@ const DocumentIdPage = ({ params }: DocumentIdPageProps) => {
                 <div className="pt-2">
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <button className="flex items-center gap-x-2 px-2 py-1 text-xs text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800/60 rounded-md transition font-medium w-fit cursor-pointer">
+                      <button className="flex items-center gap-x-2 px-3 py-1.5 text-sm text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800/60 rounded-md transition font-medium w-fit cursor-pointer">
                         <Plus className="h-3.5 w-3.5" />
                         <span>Add property</span>
                       </button>
@@ -801,30 +831,30 @@ const DocumentIdPage = ({ params }: DocumentIdPageProps) => {
               </div>
 
             {/* Comments List */}
-            <div className="pt-4 border-t border-neutral-200 dark:border-neutral-800 space-y-4">
-              <div className="text-sm font-semibold text-neutral-800 dark:text-neutral-200">
+            <div className="pt-8 mt-8 border-t border-neutral-200 dark:border-neutral-800 space-y-6">
+              <div className="text-base md:text-lg font-bold text-neutral-800 dark:text-neutral-200">
                 Comments
               </div>
               <div className="space-y-3">
                 {comments.map((c: any) => (
-                  <div key={c.id} className="flex items-start gap-x-3 text-xs">
-                    <div className="h-6 w-6 rounded-full bg-blue-500 text-white font-bold flex items-center justify-center select-none text-[10px] shrink-0">
+                  <div key={c.id} className="flex items-start gap-x-3 text-sm">
+                    <div className="h-8 w-8 rounded-full bg-blue-500 text-white font-bold flex items-center justify-center select-none text-xs shrink-0">
                       {c.author.substring(0, 1).toUpperCase()}
                     </div>
                     <div className="space-y-1">
                       <div className="flex items-center gap-x-2">
-                        <span className="font-semibold text-neutral-700 dark:text-neutral-300">{c.author}</span>
-                        <span className="text-[10px] text-muted-foreground">
+                        <span className="font-semibold text-neutral-800 dark:text-neutral-250">{c.author}</span>
+                        <span className="text-xs text-muted-foreground">
                           {new Date(c.createdAt).toLocaleDateString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
                         </span>
                       </div>
-                      <p className="text-neutral-600 dark:text-neutral-400">{c.content}</p>
+                      <p className="text-sm text-neutral-600 dark:text-neutral-400">{c.content}</p>
                     </div>
                   </div>
                 ))}
               </div>
-              <div className="flex items-center gap-x-3 pt-2">
-                <div className="h-6 w-6 rounded-full bg-neutral-300 dark:bg-neutral-700 font-bold flex items-center justify-center select-none text-[10px] text-neutral-600 dark:text-neutral-400 shrink-0">
+              <div className="flex items-center gap-x-3 pt-4">
+                <div className="h-8 w-8 rounded-full bg-neutral-300 dark:bg-neutral-700 font-bold flex items-center justify-center select-none text-xs text-neutral-600 dark:text-neutral-400 shrink-0">
                   {user?.fullName?.substring(0, 1).toUpperCase() || "M"}
                 </div>
                 <input
@@ -836,7 +866,7 @@ const DocumentIdPage = ({ params }: DocumentIdPageProps) => {
                       (e.target as HTMLInputElement).value = "";
                     }
                   }}
-                  className="flex-1 px-3 py-1.5 text-xs bg-neutral-50 dark:bg-neutral-850 border border-neutral-205 dark:border-neutral-750 rounded-md outline-hidden focus:ring-1 focus:ring-blue-500 text-neutral-700 dark:text-neutral-300"
+                  className="flex-1 px-4 py-2 text-sm bg-neutral-50 dark:bg-neutral-850 border border-neutral-205 dark:border-neutral-750 rounded-md outline-hidden focus:ring-1 focus:ring-blue-500 text-neutral-700 dark:text-neutral-300"
                 />
               </div>
             </div>
@@ -909,7 +939,7 @@ const DocumentIdPage = ({ params }: DocumentIdPageProps) => {
                   key={documentId}
                   documentId={documentId}
                   onChange={onChange}
-                  initialContent={doc.content}
+                  initialContent={editorInitialContent}
                   smallText={isSmallText}
                   onEditorReady={setEditor}
                   editorFont={activeFont}
@@ -974,7 +1004,7 @@ const DocumentIdPage = ({ params }: DocumentIdPageProps) => {
               <Editor
                 key={documentId}
                 onChange={onChange}
-                initialContent={doc.content}
+                initialContent={editorInitialContent}
                 smallText={isSmallText}
                 onEditorReady={setEditor}
                 editorFont={activeFont}

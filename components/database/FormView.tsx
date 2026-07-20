@@ -29,11 +29,14 @@ import {
   Mail,
   Link,
   Phone,
-  X
+  X,
+  UploadCloud,
+  Paperclip
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { useSupabaseAuth } from "@/components/providers/supabase-provider";
+import { supabase } from "@/lib/supabase";
 
 const validateField = (type: string, value: string): string | null => {
   if (!value) return null;
@@ -147,6 +150,48 @@ export const FormView = ({
     setFormIsPublic(nextVal);
     handleSaveConfig({ formIsPublic: nextVal });
     toast.success(nextVal ? "Form is now public!" : "Form is now private to members.");
+  };
+
+  const handleFileUpload = async (propId: string, file: File, type: string) => {
+    if (file.size > 3 * 1024 * 1024) {
+      toast.error("File size must be under 3 MB");
+      return;
+    }
+
+    if (type === "pdf" && file.type !== "application/pdf") {
+      toast.error("Please upload a PDF file");
+      return;
+    }
+    if (type === "image" && !file.type.startsWith("image/")) {
+      toast.error("Please upload an image file");
+      return;
+    }
+
+    const loadingToastId = toast.loading("Uploading file...");
+
+    try {
+      const fileExtension = file.name.split(".").pop();
+      const uniqueFileName = `${documentId}/${crypto.randomUUID()}.${fileExtension}`;
+
+      const { error } = await supabase.storage
+        .from("user-docs")
+        .upload(uniqueFileName, file, {
+          cacheControl: "3600",
+          upsert: true,
+        });
+
+      if (error) throw error;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from("user-docs")
+        .getPublicUrl(uniqueFileName);
+
+      handleFieldChange(propId, publicUrl, type);
+      toast.success("File uploaded successfully!", { id: loadingToastId });
+    } catch (err: any) {
+      console.error(err);
+      toast.error(`Upload failed: ${err.message || err}`, { id: loadingToastId });
+    }
   };
 
   const handleFieldChange = (propId: string, value: string, type: string) => {
@@ -559,6 +604,70 @@ export const FormView = ({
                         }}
                         className="w-full text-xs px-3.5 py-2 border border-neutral-200 dark:border-neutral-800 rounded-lg bg-neutral-50/50 dark:bg-neutral-800 focus:ring-1 focus:ring-blue-500 outline-hidden dark:text-neutral-200"
                       />
+                    ) : prop.type === "pdf" || prop.type === "image" || prop.type === "file" ? (
+                      <div className="space-y-2">
+                        {formValues[prop.id] ? (
+                          <div className="flex items-center justify-between border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-900 px-4 py-3 rounded-lg animate-fade-in">
+                            <div className="flex items-center gap-x-2 text-xs truncate">
+                              <Paperclip className="h-4 w-4 text-neutral-400 shrink-0" />
+                              <a
+                                href={formValues[prop.id]}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="text-blue-500 hover:underline truncate max-w-sm"
+                              >
+                                {formValues[prop.id].split("/").pop() || "Uploaded document"}
+                              </a>
+                            </div>
+                            {preview && (
+                              <button
+                                type="button"
+                                onClick={() => handleFieldChange(prop.id, "", prop.type)}
+                                className="p-1 hover:bg-neutral-200 dark:hover:bg-neutral-800 text-neutral-400 hover:text-neutral-600 rounded transition"
+                              >
+                                <X className="h-4 w-4" />
+                              </button>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="relative">
+                            <input
+                              type="file"
+                              id={`file-upload-${prop.id}`}
+                              disabled={!preview}
+                              accept={
+                                prop.type === "pdf" 
+                                  ? "application/pdf" 
+                                  : prop.type === "image" 
+                                    ? "image/*" 
+                                    : "*"
+                              }
+                              onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) {
+                                  handleFileUpload(prop.id, file, prop.type);
+                                }
+                              }}
+                              className="hidden"
+                            />
+                            <label
+                              htmlFor={`file-upload-${prop.id}`}
+                              className={cn(
+                                "flex flex-col items-center justify-center p-6 border border-dashed border-neutral-350 dark:border-neutral-700 rounded-lg hover:bg-neutral-50 dark:hover:bg-neutral-850/40 transition cursor-pointer select-none space-y-2 text-center",
+                                !preview && "opacity-75 cursor-not-allowed hover:bg-transparent"
+                              )}
+                            >
+                              <UploadCloud className="h-6 w-6 text-neutral-400 animate-pulse" />
+                              <span className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">
+                                {!preview ? "Upload field active in form preview" : `Click to upload ${prop.type.toUpperCase()}`}
+                              </span>
+                              <span className="text-[10px] text-neutral-450 dark:text-neutral-500">
+                                Max size: 3 MB
+                              </span>
+                            </label>
+                          </div>
+                        )}
+                      </div>
                     ) : (
                       <input
                         type="text"
@@ -617,6 +726,9 @@ export const FormView = ({
                             { label: "Email", type: "email" as const, icon: Mail },
                             { label: "URL", type: "url" as const, icon: Link },
                             { label: "Phone", type: "phone" as const, icon: Phone },
+                            { label: "PDF Upload", type: "pdf" as const, icon: FileText },
+                            { label: "Image Upload", type: "image" as const, icon: Layout },
+                            { label: "File Upload", type: "file" as const, icon: Paperclip },
                           ].map((qt) => {
                             const Icon = qt.icon;
                             return (

@@ -9,6 +9,9 @@ export type PropertyType =
   | "url"
   | "email"
   | "phone"
+  | "pdf"
+  | "image"
+  | "file"
   | "relation";
 
 export interface DatabaseProperty {
@@ -50,6 +53,7 @@ export interface DatabaseRowConfig {
    */
   values: Record<string, string>;
   comments?: DatabaseComment[];
+  editorContent?: string;
 }
 
 // ─── Helpers ───────────────────────────────────────────────────────────────
@@ -145,5 +149,8 @@ export const PROPERTY_TYPE_META: Record<
   url:         { label: "URL",          icon: "Link" },
   email:       { label: "Email",        icon: "Mail" },
   phone:       { label: "Phone",        icon: "Phone" },
+  pdf:         { label: "PDF",          icon: "FileText" },
+  image:       { label: "Image",        icon: "Layout" },
+  file:        { label: "File",         icon: "Paperclip" },
   relation:    { label: "Relation",     icon: "ArrowUpRight" },
 };

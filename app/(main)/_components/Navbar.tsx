@@ -7,6 +7,7 @@ import { useQuery, useMutation } from "@/hooks/use-supabase-db";
 import { MenuIcon, Star, Eye } from "lucide-react";
 import { useParams } from "next/navigation";
 import { Title } from "./Title";
+import { Breadcrumbs } from "./Breadcrumbs";
 import { Banner } from "./Banner";
 import { Menu } from "./Menu";
 import { Publish } from "./Publish";
@@ -58,8 +59,11 @@ export const Navbar = ({ isCollapsed, onResetWidth }: NavbarProps) => {
             </button>
           </ActionTooltip>
         )}
-        <div className="flex w-full items-center justify-between">
-          <Title initialData={document} />
+        <div className="flex w-full items-center justify-between overflow-hidden">
+          <div className="flex items-center gap-x-1.5 overflow-hidden">
+            <Breadcrumbs documentId={document._id} />
+            <Title initialData={document} />
+          </div>
           <div className="flex shrink-0 items-center">
             <Publish initialData={document} />
             {document.isPublished && (

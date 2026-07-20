@@ -30,6 +30,9 @@ import {
   ChevronDown,
   X,
   ArrowUpRight,
+  FileText,
+  Image,
+  Paperclip
 } from "lucide-react";
 import { useState, useRef } from "react";
 import {
@@ -134,6 +137,9 @@ const TYPE_ICONS: Record<PropertyType, React.ReactNode> = {
   url:         <LinkIcon className="h-3 w-3" />,
   email:       <Mail className="h-3 w-3" />,
   phone:       <Phone className="h-3 w-3" />,
+  pdf:         <FileText className="h-3 w-3" />,
+  image:       <Image className="h-3 w-3" />,
+  file:        <Paperclip className="h-3 w-3" />,
   relation:    <ArrowUpRight className="h-3.5 w-3.5" />,
 };
 

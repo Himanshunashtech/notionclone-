@@ -7,6 +7,7 @@ import { api } from "@/lib/supabase-db";
 import { Doc } from "@/lib/supabase-db";
 import { useMutation } from "@/hooks/use-supabase-db";
 import { ChangeEvent, useRef, useState } from "react";
+import { DocumentIcon } from "@/components/document-icon";
 
 interface TitleProps {
   initialData: Doc<"documents">;
@@ -48,7 +49,9 @@ export const Title = ({ initialData }: TitleProps) => {
 
   return (
     <div className="flex min-w-0 items-center gap-x-1">
-      {!!initialData.icon && <p>{initialData.icon}</p>}
+      {!!initialData.icon && (
+        <DocumentIcon icon={initialData.icon} className="mr-2 h-5 w-5 shrink-0 text-lg" />
+      )}
       {isEditing ? (
         <Input
           ref={inputRef}

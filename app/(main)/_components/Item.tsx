@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { useParams, useRouter } from "next/navigation";
 import { useQuery, useMutation } from "@/hooks/use-supabase-db";
 import { toast } from "sonner";
+import { DocumentIcon } from "@/components/document-icon";
 import {
   DropdownMenu,
   DropdownMenuSeparator,
@@ -345,9 +346,7 @@ export const Item = ({
             </div>
           )}
           {documentIcon ? (
-            <div className="mr-1 shrink-0 text-[1.125rem] leading-none">
-              {documentIcon}
-            </div>
+            <DocumentIcon icon={documentIcon} className="mr-2.5 h-[22px] w-[22px] shrink-0 text-xl" />
           ) : isWiki ? (
             <BookOpen className="text-muted-foreground h-4.5 w-4.5 shrink-0 mr-2" />
           ) : (
@@ -580,7 +579,9 @@ export const Item = ({
                     className="w-full justify-start text-left text-sm"
                     onClick={() => onMove(doc._id)}
                   >
-                    {doc.icon && <span className="mr-2">{doc.icon}</span>}
+                    {doc.icon && (
+                      <DocumentIcon icon={doc.icon} className="mr-2.5 h-5 w-5 shrink-0 text-lg" />
+                    )}
                     {doc.title || "Untitled"}
                   </Button>
                 ))}
