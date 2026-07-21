@@ -77,6 +77,8 @@ const Navigation = () => {
   const removeDocument = useMutation(api.documents.remove);
   const toggleFavorite = useMutation(api.documents.toggleFavorite);
   const rootDocuments = useQuery(api.documents.getSidebar, {});
+  const userSettings = useQuery(api.userSettings.getUserSettings);
+  const updateUserSettings = useMutation(api.userSettings.updateUserSettings);
 
   const [isTeamspaceExpanded, setIsTeamspaceExpanded] = useState(true);
   const [expanded, setExpanded] = useState<Record<string, boolean>>(() => {
@@ -316,23 +318,17 @@ const Navigation = () => {
   };
 
   useEffect(() => {
-    if (rootDocuments === undefined || isSeedingRef.current) return;
+    if (rootDocuments === undefined || userSettings === undefined || isSeedingRef.current) return;
 
-    const alreadyOnboarded = localStorage.getItem("zotion-onboarding-done");
-    if (alreadyOnboarded) return;
-
-    // Only show onboarding for brand-new accounts with no pages at all
-    if (rootDocuments.length === 0) {
+    // Show onboarding if DB userSettings says onboarded is false (or not created yet)
+    if (!userSettings?.onboarded) {
       onboarding.onOpen(async (teamName: string) => {
         onboarding.onClose();
-        localStorage.setItem("zotion-onboarding-done", "true");
+        await updateUserSettings({ onboarded: true });
         await seedTeamspace(teamName);
       });
-    } else {
-      // Has pages already — skip onboarding
-      localStorage.setItem("zotion-onboarding-done", "true");
     }
-  }, [rootDocuments]);
+  }, [rootDocuments, userSettings]);
 
   const isDefaultTeamspace = (doc: any) =>
     ["Projects", "Meetings", "Docs", "Tasks", "Brainstorming Session", "Goals"].includes(doc.title);

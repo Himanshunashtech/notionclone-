@@ -118,6 +118,9 @@ export const AccountModal = () => {
     }
   };
 
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteConfirmationText, setDeleteConfirmationText] = useState("");
+
   const handleRemoveAvatar = async () => {
     if (!user) return;
     try {
@@ -150,8 +153,7 @@ export const AccountModal = () => {
 
   const handleDeleteAccount = async () => {
     if (!user) return;
-    const confirm = window.prompt("Type 'delete my account' to confirm permanent deletion of all your data:");
-    if (confirm !== "delete my account") {
+    if (deleteConfirmationText !== "delete my account") {
       toast.error("Account deletion cancelled or confirmation phrase mismatched.");
       return;
     }
@@ -161,6 +163,7 @@ export const AccountModal = () => {
       await deleteAccount();
       await supabase.auth.signOut();
       toast.success("Account and all associated data deleted successfully.");
+      setShowDeleteConfirm(false);
       accountModal.onClose();
       router.push("/");
     } catch (error: any) {
@@ -171,6 +174,7 @@ export const AccountModal = () => {
   };
 
   return (
+    <>
     <Dialog open={accountModal.isOpen} onOpenChange={accountModal.onClose}>
       <DialogTitle hidden>Manage Account</DialogTitle>
       <DialogDescription className="sr-only">
@@ -290,7 +294,7 @@ export const AccountModal = () => {
               </div>
               <Button
                 variant="destructive"
-                onClick={handleDeleteAccount}
+                onClick={() => setShowDeleteConfirm(true)}
                 disabled={isDeleting || isSaving || isUploading}
                 className="w-full sm:w-auto bg-destructive hover:bg-destructive/90"
               >
@@ -302,5 +306,63 @@ export const AccountModal = () => {
         </div>
       </DialogContent>
     </Dialog>
+
+    <Dialog open={showDeleteConfirm} onOpenChange={(open) => {
+      if (!open) {
+        setShowDeleteConfirm(false);
+        setDeleteConfirmationText("");
+      }
+    }}>
+      <DialogTitle hidden>Confirm Account Deletion</DialogTitle>
+      <DialogDescription className="sr-only">
+        Confirm permanent deletion of all your data by typing 'delete my account'.
+      </DialogDescription>
+      <DialogContent className="max-w-md dark:bg-dark p-6">
+        <DialogHeader className="pb-4 border-b">
+          <h2 className="text-lg font-semibold text-destructive flex items-center gap-2">
+            Delete Account permanently?
+          </h2>
+        </DialogHeader>
+        <div className="space-y-4 pt-4">
+          <p className="text-sm text-muted-foreground">
+            This action is irreversible. All of your notes, data, settings, and documents will be permanently deleted.
+          </p>
+          <div className="space-y-2">
+            <Label htmlFor="delete-confirm" className="text-sm">
+              Type <strong className="text-destructive font-mono select-all">delete my account</strong> to confirm:
+            </Label>
+            <Input
+              id="delete-confirm"
+              value={deleteConfirmationText}
+              onChange={(e) => setDeleteConfirmationText(e.target.value)}
+              placeholder="delete my account"
+              className="border-destructive focus-visible:ring-destructive"
+              autoFocus
+            />
+          </div>
+          <div className="flex justify-end gap-3 pt-2">
+            <Button
+              variant="outline"
+              disabled={isDeleting}
+              onClick={() => {
+                setShowDeleteConfirm(false);
+                setDeleteConfirmationText("");
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={isDeleting || deleteConfirmationText !== "delete my account"}
+              onClick={handleDeleteAccount}
+            >
+              {isDeleting && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+              Permanently Delete
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 };

@@ -88,6 +88,7 @@ export interface UserSettingsRow {
   editorFont?: string;
   focusMode: boolean;
   customLandingPageId?: string;
+  onboarded?: boolean;
 }
 
 export interface CalendarEventRow {
@@ -137,6 +138,7 @@ const mapUserSettings = (row: any): UserSettingsRow => {
     editorFont: row.editor_font || undefined,
     focusMode: row.focus_mode,
     customLandingPageId: row.custom_landing_page_id || undefined,
+    onboarded: row.onboarded,
   };
 };
 
@@ -275,6 +277,7 @@ const rawDbQueries = {
   },
 
   getById: async (userId: string | null, args: { documentId: string }) => {
+    if (!args || !args.documentId) return null;
     const { data, error } = await supabase
       .from("documents")
       .select("*")
@@ -381,6 +384,7 @@ const rawDbQueries = {
   },
 
   getVersions: async (userId: string, args: { documentId: string }) => {
+    if (!args || !args.documentId) return [];
     const { data, error } = await supabase
       .from("document_versions")
       .select("*")
@@ -392,6 +396,7 @@ const rawDbQueries = {
   },
 
   getActivities: async (userId: string, args: { documentId: string }) => {
+    if (!args || !args.documentId) return [];
     const { data, error } = await supabase
       .from("page_activities")
       .select("*")
@@ -757,7 +762,7 @@ const rawDbMutations = {
     return mapDocument(data);
   },
 
-  updateUserSettings: async (userId: string, args: { editorFont?: string; focusMode?: boolean; customLandingPageId?: string | null }) => {
+  updateUserSettings: async (userId: string, args: { editorFont?: string; focusMode?: boolean; customLandingPageId?: string | null; onboarded?: boolean }) => {
     const { data: existing, error: getError } = await supabase
       .from("user_settings")
       .select("id")
@@ -768,6 +773,7 @@ const rawDbMutations = {
     if (args.editorFont !== undefined) updateObj.editor_font = args.editorFont;
     if (args.focusMode !== undefined) updateObj.focus_mode = args.focusMode;
     if (args.customLandingPageId !== undefined) updateObj.custom_landing_page_id = args.customLandingPageId;
+    if (args.onboarded !== undefined) updateObj.onboarded = args.onboarded;
 
     if (existing) {
       const { error } = await supabase
@@ -783,6 +789,7 @@ const rawDbMutations = {
           editor_font: args.editorFont || "default",
           focus_mode: args.focusMode || false,
           custom_landing_page_id: args.customLandingPageId || null,
+          onboarded: args.onboarded || false,
         });
       if (error) throw error;
     }

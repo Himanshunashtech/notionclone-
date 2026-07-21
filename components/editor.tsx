@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { EditorFont } from "@/hooks/useEditorFont";
 import { useCoverImage } from "@/hooks/useCoverImage";
 import { useWordCount } from "@/hooks/useWordCount";
@@ -11,7 +11,21 @@ import {
   createCodeBlockSpec,
   BlockNoteSchema,
 } from "@blocknote/core";
-import { useCreateBlockNote } from "@blocknote/react";
+import { 
+  useCreateBlockNote, 
+  createReactStyleSpec,
+  FormattingToolbar,
+  FormattingToolbarController,
+  useBlockNoteEditor,
+  useActiveStyles,
+  BlockTypeSelect,
+  BasicTextStyleButton,
+  TextAlignButton,
+  ColorStyleButton,
+  NestBlockButton,
+  UnnestBlockButton,
+  CreateLinkButton
+} from "@blocknote/react";
 import { BlockNoteView } from "@blocknote/mantine";
 import { useTheme } from "next-themes";
 import { useSupabaseStorage } from "@/hooks/use-supabase-storage";
@@ -20,6 +34,8 @@ import "@blocknote/core/style.css";
 import "@blocknote/mantine/style.css";
 import { Doc } from "@/lib/supabase-db";
 import { useMentionModal } from "@/hooks/useMentionModal";
+import { toast } from "sonner";
+import { MessageSquarePlus } from "lucide-react";
 
 interface EditorProps {
   onChange: (value: string) => void;
@@ -30,6 +46,30 @@ interface EditorProps {
   onEditorReady?: (editor: BlockNoteEditor) => void;
   documentId?: string;
 }
+
+export const CommentStyle = createReactStyleSpec(
+  {
+    type: "comment",
+    propSchema: "string",
+  },
+  {
+    render: ({ value, contentRef, children }: any) => {
+      return (
+        <span
+          className="bg-amber-100/60 dark:bg-amber-950/40 border-b border-dashed border-amber-500 dark:border-amber-400 hover:bg-amber-200/50 cursor-pointer select-text transition px-0.5"
+          title={`Comment: ${value}`}
+          onClick={(e) => {
+            e.stopPropagation();
+            toast.info(`Comment: ${value}`);
+          }}
+          ref={contentRef}
+        >
+          {children}
+        </span>
+      );
+    },
+  }
+);
 
 const schema = BlockNoteSchema.create().extend({
   blockSpecs: {
@@ -49,6 +89,9 @@ const schema = BlockNoteSchema.create().extend({
         css: { name: "CSS" },
       },
     }),
+  },
+  styleSpecs: {
+    comment: CommentStyle,
   },
 });
 
@@ -96,6 +139,85 @@ const sanitizeBlocks = (blocks: any[]): any[] => {
       }
       return block;
     });
+};
+
+const CommentButton = () => {
+  const editor = useBlockNoteEditor();
+  const activeStyles = useActiveStyles();
+  const [showInput, setShowInput] = useState(false);
+  const [inputValue, setInputValue] = useState("");
+  
+  const isCommentActive = (activeStyles as any).comment !== undefined;
+
+  useEffect(() => {
+    if (showInput) {
+      setInputValue(((activeStyles as any).comment as string) || "");
+    }
+  }, [showInput, activeStyles]);
+
+  const handleSubmit = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (inputValue.trim() === "") {
+      editor.toggleStyles({ comment: undefined } as any);
+    } else {
+      editor.toggleStyles({ comment: inputValue } as any);
+    }
+    setShowInput(false);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      handleSubmit();
+    } else if (e.key === "Escape") {
+      setShowInput(false);
+    }
+  };
+
+  if (showInput) {
+    return (
+      <form 
+        onSubmit={handleSubmit} 
+        className="flex items-center gap-1.5 px-2 py-1 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded-md h-8 shadow-sm"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <input
+          type="text"
+          value={inputValue}
+          onChange={(e) => setInputValue(e.target.value)}
+          onKeyDown={handleKeyDown}
+          placeholder="Enter comment..."
+          className="text-xs px-1 py-0.5 outline-none bg-transparent w-32 text-neutral-800 dark:text-neutral-100"
+          autoFocus
+        />
+        <button
+          type="submit"
+          className="text-xs px-2 py-0.5 rounded bg-amber-500 hover:bg-amber-600 text-white font-medium"
+        >
+          Add
+        </button>
+        <button
+          type="button"
+          onClick={() => setShowInput(false)}
+          className="text-xs px-2 py-0.5 rounded bg-neutral-200 dark:bg-neutral-800 hover:bg-neutral-300 text-neutral-700 dark:text-neutral-300"
+        >
+          Cancel
+        </button>
+      </form>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={() => setShowInput(true)}
+      className={`p-1 rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-800 transition flex items-center justify-center h-8 w-8 text-neutral-600 dark:text-neutral-300 ${
+        isCommentActive ? "bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 font-bold" : ""
+      }`}
+      title="Add inline comment"
+    >
+      <MessageSquarePlus className="h-4.5 w-4.5" />
+    </button>
+  );
 };
 
 const Editor = ({
@@ -305,7 +427,29 @@ const Editor = ({
         theme={resolvedTheme === "dark" ? "dark" : "light"}
         onChange={handleEditorChange}
         className="wrap-break-word"
-      />
+        formattingToolbar={false}
+      >
+        <FormattingToolbarController
+          formattingToolbar={() => (
+            <FormattingToolbar>
+              <BlockTypeSelect />
+              <BasicTextStyleButton basicTextStyle="bold" />
+              <BasicTextStyleButton basicTextStyle="italic" />
+              <BasicTextStyleButton basicTextStyle="underline" />
+              <BasicTextStyleButton basicTextStyle="strike" />
+              <BasicTextStyleButton basicTextStyle="code" />
+              <TextAlignButton textAlignment="left" />
+              <TextAlignButton textAlignment="center" />
+              <TextAlignButton textAlignment="right" />
+              <ColorStyleButton />
+              <NestBlockButton />
+              <UnnestBlockButton />
+              <CreateLinkButton />
+              <CommentButton />
+            </FormattingToolbar>
+          )}
+        />
+      </BlockNoteView>
     </div>
   );
 };

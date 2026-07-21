@@ -121,6 +121,8 @@ export const DatabaseView = ({
   const handleAddRow = async () => {
     if (preview) return;
 
+    const isWiki = config.viewType === "document";
+
     const defaultValues: Record<string, string> = {};
     config.properties.forEach((prop) => {
       defaultValues[prop.id] = defaultValueForType(prop);
@@ -136,16 +138,18 @@ export const DatabaseView = ({
       title: "Untitled",
       parentDocument: documentId,
     }).then(async (newId) => {
-      await update({
-        id: newId as Id<"documents">,
-        content: initialRowContent,
-      });
+      if (!isWiki) {
+        await update({
+          id: newId as Id<"documents">,
+          content: initialRowContent,
+        });
+      }
     });
 
     toast.promise(promise, {
-      loading: "Adding new row...",
-      success: "New row added!",
-      error: "Failed to add row.",
+      loading: isWiki ? "Adding new page..." : "Adding new row...",
+      success: isWiki ? "New page added!" : "New row added!",
+      error: isWiki ? "Failed to add page." : "Failed to add row.",
     });
   };
 

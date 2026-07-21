@@ -363,7 +363,7 @@ const DocumentIdPage = ({ params }: DocumentIdPageProps) => {
     const promise = createSubpage({
       title,
       parentDocument: documentId,
-      content: defaultDbContent,
+      content: "",
     }).then((newDocId) => {
       router.push(`/documents/${newDocId}`);
     });
