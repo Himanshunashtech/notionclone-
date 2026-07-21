@@ -17,15 +17,21 @@ import { useUser } from "@/components/providers/supabase-provider";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 import { Loader2, Upload, User, Settings } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useMutation } from "@/hooks/use-supabase-db";
+import { api } from "@/lib/supabase-db";
 
 export const AccountModal = () => {
   const accountModal = useAccount();
   const { user } = useUser();
+  const router = useRouter();
+  const deleteAccount = useMutation(api.userSettings.deleteUserAccount);
 
   // Profile Form State
   const [fullName, setFullName] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Sync state with logged in user metadata
@@ -142,6 +148,28 @@ export const AccountModal = () => {
     }
   };
 
+  const handleDeleteAccount = async () => {
+    if (!user) return;
+    const confirm = window.prompt("Type 'delete my account' to confirm permanent deletion of all your data:");
+    if (confirm !== "delete my account") {
+      toast.error("Account deletion cancelled or confirmation phrase mismatched.");
+      return;
+    }
+
+    try {
+      setIsDeleting(true);
+      await deleteAccount();
+      await supabase.auth.signOut();
+      toast.success("Account and all associated data deleted successfully.");
+      accountModal.onClose();
+      router.push("/");
+    } catch (error: any) {
+      toast.error(error.message || "Failed to delete account");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   return (
     <Dialog open={accountModal.isOpen} onOpenChange={accountModal.onClose}>
       <DialogTitle hidden>Manage Account</DialogTitle>
@@ -242,14 +270,34 @@ export const AccountModal = () => {
               />
             </div>
 
-            <Button
-              onClick={handleUpdateProfile}
-              disabled={isSaving || isUploading || !fullName.trim()}
-              className="w-full sm:w-auto"
-            >
-              {isSaving && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
-              Save Profile Changes
-            </Button>
+            <div className="flex flex-col sm:flex-row gap-2 pt-2">
+              <Button
+                onClick={handleUpdateProfile}
+                disabled={isSaving || isUploading || isDeleting || !fullName.trim()}
+                className="w-full sm:w-auto"
+              >
+                {isSaving && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+                Save Profile Changes
+              </Button>
+            </div>
+
+            <div className="border-t pt-6 space-y-4">
+              <div className="space-y-1">
+                <h4 className="text-sm font-semibold text-destructive">Danger Zone</h4>
+                <p className="text-xs text-muted-foreground leading-normal">
+                  Permanently delete your account and all associated documents, settings, and events. This action is irreversible.
+                </p>
+              </div>
+              <Button
+                variant="destructive"
+                onClick={handleDeleteAccount}
+                disabled={isDeleting || isSaving || isUploading}
+                className="w-full sm:w-auto bg-destructive hover:bg-destructive/90"
+              >
+                {isDeleting && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+                Delete Account
+              </Button>
+            </div>
           </div>
         </div>
       </DialogContent>

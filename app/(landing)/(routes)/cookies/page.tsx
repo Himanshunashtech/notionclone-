@@ -17,7 +17,7 @@ export default function CookiesPage() {
   };
 
   return (
-    <div className="dark:bg-dark min-h-screen text-foreground transition-colors duration-300 py-16">
+    <div className="dark:bg-dark min-h-screen text-foreground transition-colors duration-300 pt-4 pb-16">
       <div className="mx-auto max-w-3xl px-6">
         
         {/* Intro */}

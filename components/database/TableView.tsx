@@ -383,10 +383,20 @@ function UrlCell({ prop: _prop, value, preview, onChange }: CellProps) {
     <div className="flex items-center gap-x-1 w-full">
       <LinkIcon className="h-3 w-3 text-neutral-400 shrink-0" />
       <input
+        key={value}
         disabled={preview}
         type="url"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
+        defaultValue={value}
+        onBlur={(e) => {
+          if (e.target.value !== value) {
+            onChange(e.target.value);
+          }
+        }}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            e.currentTarget.blur();
+          }
+        }}
         placeholder="https://…"
         className="bg-transparent focus:bg-white dark:focus:bg-neutral-800 border-none outline-hidden flex-1 text-xs text-blue-600 dark:text-blue-400 placeholder:text-neutral-300 dark:placeholder:text-neutral-600 px-1 py-1 rounded-md transition"
       />
@@ -410,10 +420,20 @@ function EmailCell({ prop: _prop, value, preview, onChange }: CellProps) {
     <div className="flex items-center gap-x-1 w-full">
       <Mail className="h-3 w-3 text-neutral-400 shrink-0" />
       <input
+        key={value}
         disabled={preview}
         type="email"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
+        defaultValue={value}
+        onBlur={(e) => {
+          if (e.target.value !== value) {
+            onChange(e.target.value);
+          }
+        }}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            e.currentTarget.blur();
+          }
+        }}
         placeholder="name@example.com"
         className="bg-transparent focus:bg-white dark:focus:bg-neutral-800 border-none outline-hidden flex-1 text-xs text-neutral-700 dark:text-neutral-300 placeholder:text-neutral-300 dark:placeholder:text-neutral-600 px-1 py-1 rounded-md transition"
       />
@@ -437,10 +457,20 @@ function PhoneCell({ prop: _prop, value, preview, onChange }: CellProps) {
     <div className="flex items-center gap-x-1 w-full">
       <Phone className="h-3 w-3 text-neutral-400 shrink-0" />
       <input
+        key={value}
         disabled={preview}
         type="tel"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
+        defaultValue={value}
+        onBlur={(e) => {
+          if (e.target.value !== value) {
+            onChange(e.target.value);
+          }
+        }}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            e.currentTarget.blur();
+          }
+        }}
         placeholder="+1 555 000 0000"
         className="bg-transparent focus:bg-white dark:focus:bg-neutral-800 border-none outline-hidden flex-1 text-xs text-neutral-700 dark:text-neutral-300 placeholder:text-neutral-300 dark:placeholder:text-neutral-600 px-1 py-1 rounded-md transition"
       />
@@ -451,9 +481,19 @@ function PhoneCell({ prop: _prop, value, preview, onChange }: CellProps) {
 function TextCell({ prop: _prop, value, preview, onChange }: CellProps) {
   return (
     <input
+      key={value}
       disabled={preview}
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
+      defaultValue={value}
+      onBlur={(e) => {
+        if (e.target.value !== value) {
+          onChange(e.target.value);
+        }
+      }}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") {
+          e.currentTarget.blur();
+        }
+      }}
       placeholder="—"
       className="bg-transparent focus:bg-white dark:focus:bg-neutral-800 border-none outline-hidden w-full px-1.5 py-1 text-xs text-neutral-700 dark:text-neutral-300 placeholder:text-neutral-300 dark:placeholder:text-neutral-600 rounded-md transition"
     />

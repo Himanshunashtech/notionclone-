@@ -181,6 +181,7 @@ export const api = {
   userSettings: {
     getUserSettings: "getUserSettings" as const,
     updateUserSettings: "updateUserSettings" as const,
+    deleteUserAccount: "deleteUserAccount" as const,
   },
   calendar: {
     getEvents: "getEvents" as const,
@@ -1047,6 +1048,12 @@ const rawDbMutations = {
 
     if (error) throw error;
     return data.id;
+  },
+
+  deleteUserAccount: async (userId: string) => {
+    const { error } = await supabase.rpc("delete_user_account");
+    if (error) throw error;
+    return true;
   }
 };
 
@@ -1060,10 +1067,8 @@ const wrapQueries = () => {
         if (!userId) return await (fn as any)(userId, args);
         const cached = await getCache(userId, key, args);
         if (cached !== null) {
-          console.log(`[Cache Hit] ${key}`, args);
           return cached;
         }
-        console.log(`[Cache Miss] Fetching database for ${key}`, args);
         const data = await (fn as any)(userId, args);
         await setCache(userId, key, args, data);
         return data;

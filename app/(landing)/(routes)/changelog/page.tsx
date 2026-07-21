@@ -6,6 +6,13 @@ export default function ChangelogPage() {
   const updates = [
     {
       date: "July 2026",
+      version: "v2.5.0",
+      title: "Mobile Responsiveness & Real-Time Performance Tuning",
+      description: "Enjoy zero-lag typing inside all document inputs by deferring database updates to blur/Enter. Bulk select and delete pages directly from the Library, and navigate seamlessly with new mobile-responsive layouts for project boards, table views, and meeting transcriptions.",
+      tags: ["Performance", "Library", "Mobile", "Aesthetics"],
+    },
+    {
+      date: "July 2026",
       version: "v2.4.0",
       title: "Introduce Tabbed Layouts & Custom Cover Presets",
       description: "Manage multiple views and pages in workspace tabs. Plus, upload or select from curated aesthetic covers with ease.",
@@ -35,7 +42,7 @@ export default function ChangelogPage() {
   ];
 
   return (
-    <div className="dark:bg-dark min-h-screen text-foreground transition-colors duration-300 py-16">
+    <div className="dark:bg-dark min-h-screen text-foreground transition-colors duration-300 pt-4 pb-16">
       <div className="mx-auto max-w-4xl px-6">
         <div className="text-center mb-16">
           <h1 className="text-4xl font-bold tracking-tight">Changelog</h1>

@@ -1,13 +1,31 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { useConvexAuth } from "@/components/providers/supabase-provider";
 import { Button } from "@/components/ui/button";
 import { SignInButton } from "@/components/auth-components";
 import { ArrowRight, FileText, Database, ShieldAlert, Sparkles, Sliders } from "lucide-react";
 import Link from "next/link";
 
+const words = [
+  { text: "Create", bg: "bg-pink-100 dark:bg-pink-950/50", textCol: "text-pink-700 dark:text-pink-300", border: "border-pink-200/50", dot: "bg-pink-500" },
+  { text: "Build", bg: "bg-emerald-100 dark:bg-emerald-950/50", textCol: "text-emerald-700 dark:text-emerald-300", border: "border-emerald-200/50", dot: "bg-emerald-500" },
+  { text: "Jam", bg: "bg-amber-100 dark:bg-amber-950/50", textCol: "text-amber-700 dark:text-amber-300", border: "border-amber-200/50", dot: "bg-amber-500" },
+  { text: "Scale", bg: "bg-indigo-100 dark:bg-indigo-950/50", textCol: "text-indigo-700 dark:text-indigo-300", border: "border-indigo-200/50", dot: "bg-indigo-500" }
+];
+
 export const Features = () => {
   const { isAuthenticated, isLoading } = useConvexAuth();
+  const [index, setIndex] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setIndex((prev) => (prev + 1) % words.length);
+    }, 2000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const currentWord = words[index];
 
   return (
     <div className="w-full max-w-5xl mx-auto px-4 py-16 space-y-24">
@@ -64,24 +82,14 @@ export const Features = () => {
             </svg>
           </div>
 
-          {/* Avatar 7: Orange circle with glasses face */}
-          <div className="w-16 h-16 rounded-full border-2 border-orange-500 bg-orange-50 dark:bg-orange-950/40 flex items-center justify-center -ml-4 overflow-hidden shadow-md transition hover:scale-110 duration-200">
-            <svg className="w-9 h-9 text-orange-600 dark:text-orange-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <circle cx="12" cy="12" r="10" />
-              <path d="M6 10h4M14 10h4" />
-              <circle cx="8" cy="11" r="2" />
-              <circle cx="16" cy="11" r="2" />
-              <path d="M9 16c1.5 1.5 4.5 1.5 6 0" strokeLinecap="round" />
-            </svg>
-          </div>
         </div>
 
         {/* Headline */}
         <h2 className="text-4xl font-bold sm:text-5xl tracking-tight max-w-2xl text-neutral-800 dark:text-neutral-100">
           Where teams and agents{" "}
-          <span className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-sky-100 dark:bg-sky-950/50 text-sky-700 dark:text-sky-300 border border-sky-200/50 shadow-sm animate-pulse">
-            <span className="w-2.5 h-2.5 rounded-full bg-sky-500 inline-block"></span>
-            Think
+          <span className={`inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full border shadow-sm transition-all duration-550 ${currentWord.bg} ${currentWord.textCol} ${currentWord.border}`}>
+            <span className={`w-2.5 h-2.5 rounded-full inline-block ${currentWord.dot}`}></span>
+            {currentWord.text}
           </span>{" "}
           together.
         </h2>

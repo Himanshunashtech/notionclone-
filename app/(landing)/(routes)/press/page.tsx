@@ -25,7 +25,7 @@ export default function PressPage() {
   ];
 
   return (
-    <div className="dark:bg-dark min-h-screen text-foreground transition-colors duration-300 py-16">
+    <div className="dark:bg-dark min-h-screen text-foreground transition-colors duration-300 pt-4 pb-16">
       <div className="mx-auto max-w-5xl px-6">
         {/* Header */}
         <div className="text-center max-w-3xl mx-auto mb-20">

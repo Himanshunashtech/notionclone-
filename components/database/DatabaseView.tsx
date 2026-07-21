@@ -295,7 +295,7 @@ export const DatabaseView = ({
   return (
     <div className="space-y-0">
       {/* ── Notion-style Tab Header ── */}
-      <div className="flex items-center justify-between border-b border-neutral-200 dark:border-neutral-800">
+      <div className="flex flex-wrap items-center justify-between border-b border-neutral-200 dark:border-neutral-800 gap-y-2 pb-2 md:pb-0">
         {/* Left: view tabs */}
         <div className="flex items-center gap-x-0">
           {/* Mobile view dropdown selector */}

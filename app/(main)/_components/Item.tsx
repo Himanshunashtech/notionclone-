@@ -212,10 +212,12 @@ export const Item = ({
         toast.success("Page turned back to normal!");
       } else {
         ids.push(id);
+        update({ id, title: "Wiki" });
         toast.success("Page turned into wiki!");
       }
       localStorage.setItem("wikiPageIds", JSON.stringify(ids));
       setIsWiki(!isWiki);
+      window.dispatchEvent(new CustomEvent("wiki-status-changed"));
     } catch {
       toast.error("Failed to update wiki status.");
     }

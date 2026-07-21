@@ -136,10 +136,22 @@ export const FilePreviewModal = () => {
         ) : (
           <>
             {/* Header controls: Menu / Page Settings */}
-            <div className="absolute right-12 top-4 z-50">
+            <div className="absolute right-12 top-[8px] z-50 flex items-center gap-x-1">
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => {
+                  router.push(`/documents/${previewModal.documentId}`);
+                  previewModal.onClose();
+                }}
+                className="h-8 w-8 p-0 text-neutral-500 hover:text-neutral-900 dark:hover:text-white transition"
+                title="Open in full page"
+              >
+                <ExternalLink className="h-4 w-4" />
+              </Button>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button size="sm" variant="ghost" aria-label="Page actions">
+                  <Button size="sm" variant="ghost" aria-label="Page actions" className="h-8 w-8 p-0 text-neutral-500 hover:text-neutral-900 dark:hover:text-white transition">
                     <MoreHorizontal className="h-4 w-4" />
                   </Button>
                 </DropdownMenuTrigger>

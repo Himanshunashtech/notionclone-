@@ -11,7 +11,7 @@ export default function TermsPage() {
   ];
 
   return (
-    <div className="dark:bg-dark min-h-screen text-foreground transition-colors duration-300 py-16">
+    <div className="dark:bg-dark min-h-screen text-foreground transition-colors duration-300 pt-4 pb-16">
       <div className="mx-auto max-w-7xl px-6">
         <div className="flex flex-col lg:flex-row gap-12">
           

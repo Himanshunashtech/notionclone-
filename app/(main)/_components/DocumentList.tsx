@@ -51,6 +51,7 @@ interface DocumentListProps {
   data?: Doc<"documents">[];
   navDrawer?: boolean;
   excludeIds?: string[];
+  onlyWikis?: boolean;
 }
 
 const SortableItem = ({
@@ -114,6 +115,7 @@ export const DocumentList = ({
   level = 0,
   navDrawer,
   excludeIds,
+  onlyWikis,
 }: DocumentListProps) => {
   const params = useParams();
   const router = useRouter();
@@ -165,6 +167,7 @@ export const DocumentList = ({
 
   const TEAMSPACE_TITLES = ["Projects", "Meetings", "Docs", "Tasks", "Brainstorming Session", "Goals"];
   const [localTeamspaceIds, setLocalTeamspaceIds] = useState<string[]>([]);
+  const [wikiPageIds, setWikiPageIds] = useState<string[]>([]);
 
   useEffect(() => {
     try {
@@ -173,6 +176,24 @@ export const DocumentList = ({
         setLocalTeamspaceIds(JSON.parse(stored));
       }
     } catch {}
+  }, []);
+
+  useEffect(() => {
+    const loadWikis = () => {
+      try {
+        const stored = localStorage.getItem("wikiPageIds");
+        setWikiPageIds(stored ? JSON.parse(stored) : []);
+      } catch {
+        setWikiPageIds([]);
+      }
+    };
+    loadWikis();
+    window.addEventListener("wiki-status-changed", loadWikis);
+    window.addEventListener("storage", loadWikis);
+    return () => {
+      window.removeEventListener("wiki-status-changed", loadWikis);
+      window.removeEventListener("storage", loadWikis);
+    };
   }, []);
 
   // Prefer prop-provided excludeIds, fall back to locally read teamspaceIds
@@ -184,7 +205,19 @@ export const DocumentList = ({
     }
     if (documents) {
       if (!parentDocumentId) {
-        setOrderedDocuments(documents.filter((d) => !TEAMSPACE_TITLES.includes(d.title) && !effectiveExcludeIds.includes(d._id)));
+        if (onlyWikis) {
+          setOrderedDocuments(documents.filter((d) => 
+            !TEAMSPACE_TITLES.includes(d.title) && 
+            !effectiveExcludeIds.includes(d._id) &&
+            wikiPageIds.includes(d._id)
+          ));
+        } else {
+          setOrderedDocuments(documents.filter((d) => 
+            !TEAMSPACE_TITLES.includes(d.title) && 
+            !effectiveExcludeIds.includes(d._id) &&
+            !wikiPageIds.includes(d._id)
+          ));
+        }
       } else if (effectiveExcludeIds.includes(parentDocumentId)) {
         const order = ["Projects", "Meetings", "Docs", "Tasks", "Brainstorming Session", "Goals"];
         const sorted = [...documents].sort((a, b) => {
@@ -200,7 +233,7 @@ export const DocumentList = ({
         setOrderedDocuments(documents);
       }
     }
-  }, [documents, parentDocumentId, isDragging, effectiveExcludeIds]);
+  }, [documents, parentDocumentId, isDragging, effectiveExcludeIds, onlyWikis, wikiPageIds]);
 
   const onExpand = (documentId: string) => {
     setExpanded((prevExpanded) => {

@@ -20,7 +20,8 @@ import {
   ArrowUpDown, 
   FileIcon,
   ChevronRight,
-  ExternalLink
+  ExternalLink,
+  Trash
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -54,9 +55,15 @@ export default function LibraryPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<"title" | "edited" | "created">("edited");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   const allDocs = useQuery(api.documents.getSearch);
   const create = useMutation(api.documents.create);
+  const archive = useMutation(api.documents.archive);
+
+  useEffect(() => {
+    setSelectedIds([]);
+  }, [activeTab]);
 
   const onCreatePage = () => {
     const promise = create({ title: "Untitled" }).then((documentId) =>
@@ -68,6 +75,23 @@ export default function LibraryPage() {
       success: "New page created!",
       error: "Failed to create page."
     });
+  };
+
+  const onDeleteSelected = async () => {
+    if (selectedIds.length === 0) return;
+
+    const ok = window.confirm(`Are you sure you want to delete the ${selectedIds.length} selected pages?`);
+    if (!ok) return;
+
+    const promises = selectedIds.map((id) => archive({ id }));
+
+    toast.promise(Promise.all(promises), {
+      loading: "Deleting selected pages...",
+      success: "Selected pages deleted successfully!",
+      error: "Failed to delete some pages."
+    });
+
+    setSelectedIds([]);
   };
 
   const formatRelativeTime = (timestamp?: number) => {
@@ -179,13 +203,24 @@ export default function LibraryPage() {
         <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-neutral-900 dark:text-neutral-100">
           Library
         </h1>
-        <Button 
-          onClick={onCreatePage}
-          className="bg-blue-600 hover:bg-blue-700 text-white rounded-md px-3 py-1.5 md:px-4 md:py-2 font-medium flex items-center gap-x-2 text-xs md:text-sm shadow-xs transition"
-        >
-          <Plus className="h-4 w-4" />
-          New page
-        </Button>
+        <div className="flex items-center gap-x-2">
+          {selectedIds.length > 0 && (
+            <Button
+              onClick={onDeleteSelected}
+              className="bg-rose-600 hover:bg-rose-700 text-white rounded-md px-3 py-1.5 md:px-4 md:py-2 font-medium flex items-center gap-x-2 text-xs md:text-sm shadow-xs transition"
+            >
+              <Trash className="h-4 w-4" />
+              Delete ({selectedIds.length})
+            </Button>
+          )}
+          <Button 
+            onClick={onCreatePage}
+            className="bg-blue-600 hover:bg-blue-700 text-white rounded-md px-3 py-1.5 md:px-4 md:py-2 font-medium flex items-center gap-x-2 text-xs md:text-sm shadow-xs transition"
+          >
+            <Plus className="h-4 w-4" />
+            New page
+          </Button>
+        </div>
       </div>
 
       {/* Tabs & Controls */}
@@ -240,8 +275,20 @@ export default function LibraryPage() {
       <div className="border border-neutral-200 dark:border-neutral-800 rounded-lg overflow-hidden bg-card/30">
         <div className="min-w-full divide-y divide-neutral-200 dark:divide-neutral-800">
           {/* Table Header */}
-          <div className="hidden md:grid grid-cols-12 bg-neutral-50/50 dark:bg-neutral-900/30 px-6 py-3 text-left text-xs font-semibold text-neutral-500 uppercase tracking-wider select-none">
-            <div className="col-span-5 flex items-center gap-x-2">
+          <div className="hidden md:grid grid-cols-12 bg-neutral-50/50 dark:bg-neutral-900/30 px-6 py-3 text-left text-xs font-semibold text-neutral-500 uppercase tracking-wider select-none items-center">
+            <div className="col-span-5 flex items-center gap-x-3">
+              <input
+                type="checkbox"
+                checked={filteredAndSortedDocs.length > 0 && selectedIds.length === filteredAndSortedDocs.length}
+                onChange={(e) => {
+                  if (e.target.checked) {
+                    setSelectedIds(filteredAndSortedDocs.map((d) => d._id));
+                  } else {
+                    setSelectedIds([]);
+                  }
+                }}
+                className="h-4 w-4 rounded border-neutral-300 dark:border-neutral-700 text-blue-600 focus:ring-1 focus:ring-blue-500 cursor-pointer"
+              />
               <FileIcon className="h-3.5 w-3.5 text-neutral-400" />
               <span>Page name</span>
             </div>
@@ -271,6 +318,19 @@ export default function LibraryPage() {
                     {/* Page name */}
                     <div className="w-full md:col-span-5 flex items-center justify-between pr-0 md:pr-4">
                       <div className="flex items-center gap-x-2.5 truncate font-medium">
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.includes(doc._id)}
+                          onClick={(e) => e.stopPropagation()}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedIds((prev) => [...prev, doc._id]);
+                            } else {
+                              setSelectedIds((prev) => prev.filter((id) => id !== doc._id));
+                            }
+                          }}
+                          className="h-4 w-4 rounded border-neutral-300 dark:border-neutral-700 text-blue-600 focus:ring-1 focus:ring-blue-500 cursor-pointer shrink-0"
+                        />
                         {doc.icon ? (
                           <span className="text-base select-none shrink-0">{doc.icon}</span>
                         ) : (

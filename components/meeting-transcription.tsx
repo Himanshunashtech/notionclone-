@@ -285,7 +285,7 @@ export const MeetingTranscription = ({ meetingTitle, documentId }: MeetingTransc
         </div>
 
         {/* Action Controls */}
-        <div className="flex items-center gap-x-2">
+        <div className="flex flex-wrap items-center gap-2">
           {/* Notes Tab Button */}
           <button className="flex items-center gap-x-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-neutral-200 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 transition">
             <FileText className="h-3.5 w-3.5" />
@@ -407,7 +407,7 @@ export const MeetingTranscription = ({ meetingTitle, documentId }: MeetingTransc
 
       {/* Footer Info Row */}
       <div className="flex flex-wrap items-center justify-between gap-4 border-t border-neutral-200 dark:border-neutral-800 pt-3 mt-4 text-[10px] text-muted-foreground">
-        <div className="flex items-center gap-x-2">
+        <div className="flex flex-wrap items-center gap-2">
           <span>Instructions:</span>
           <DropdownMenu>
             <DropdownMenuTrigger className="flex items-center gap-x-0.5 hover:text-neutral-800 dark:hover:text-neutral-200 transition outline-hidden font-medium">
@@ -438,7 +438,7 @@ export const MeetingTranscription = ({ meetingTitle, documentId }: MeetingTransc
           </DropdownMenu>
 
           <span className="text-neutral-300 dark:text-neutral-700">|</span>
-          <span>By starting, you confirm everyone being transcribed has given consent.</span>
+          <span className="break-words">By starting, you confirm everyone being transcribed has given consent.</span>
         </div>
 
         {/* Speaker and Copy Button */}

@@ -665,9 +665,36 @@ const Navigation = () => {
                 )}
               </div>
 
+              {/* Wikis Section */}
+              <div className="mb-4">
+                <div className="flex items-center justify-between px-3 py-1 group">
+                  <p className="text-muted-foreground/60 text-xs font-medium uppercase tracking-wider">
+                    Wikis
+                  </p>
+                  <button
+                    onClick={async () => {
+                      const newId = await create({ title: "Wiki" });
+                      try {
+                        const stored = localStorage.getItem("wikiPageIds");
+                        let ids = stored ? JSON.parse(stored) : [];
+                        ids.push(newId);
+                        localStorage.setItem("wikiPageIds", JSON.stringify(ids));
+                        window.dispatchEvent(new CustomEvent("wiki-status-changed"));
+                      } catch {}
+                      router.push(`/documents/${newId}`);
+                    }}
+                    className="opacity-0 group-hover:opacity-100 transition p-0.5 rounded hover:bg-neutral-300 dark:hover:bg-neutral-700 text-muted-foreground cursor-pointer"
+                    title="New wiki"
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+                <DocumentList excludeIds={teamspaceIds} onlyWikis={true} />
+              </div>
+
               <div>
                 <div className="flex items-center justify-between px-3 py-1 group">
-                  <p className="text-muted-foreground/60 text-xs font-medium">
+                  <p className="text-muted-foreground/60 text-xs font-medium uppercase tracking-wider">
                     Notes
                   </p>
                   <button
@@ -675,7 +702,7 @@ const Navigation = () => {
                       const newId = await create({ title: "Untitled" });
                       router.push(`/documents/${newId}`);
                     }}
-                    className="opacity-0 group-hover:opacity-100 transition p-0.5 rounded hover:bg-neutral-300 dark:hover:bg-neutral-700 text-muted-foreground"
+                    className="opacity-0 group-hover:opacity-100 transition p-0.5 rounded hover:bg-neutral-300 dark:hover:bg-neutral-700 text-muted-foreground cursor-pointer"
                     title="New note"
                   >
                     <Plus className="h-3.5 w-3.5" />

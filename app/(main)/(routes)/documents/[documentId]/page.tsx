@@ -3,6 +3,7 @@
 import dynamic from "next/dynamic";
 import React, { useMemo, use, useState, useEffect } from "react";
 import { useTheme } from "next-themes";
+import { useRouter } from "next/navigation";
 
 import { Cover } from "@/components/cover";
 import { Toolbar } from "@/components/toolbar";
@@ -19,6 +20,8 @@ import { isDatabase, isDatabaseRow, parseDatabaseConfig, parseDatabaseRow } from
 import { DatabaseView } from "@/components/database/DatabaseView";
 import { TableView } from "@/components/database/TableView";
 import { KanbanBoard } from "@/components/database/KanbanBoard";
+import { GalleryView } from "@/components/database/GalleryView";
+import { TodoView } from "@/components/database/TodoView";
 import { TemplatesMenu } from "@/components/database/TemplatesMenu";
 import { HistorySidebar } from "@/components/modals/HistorySidebar";
 import { MeetingTranscription } from "@/components/meeting-transcription";
@@ -54,7 +57,12 @@ import {
   Copy,
   Trash2,
   Edit,
-  SlidersHorizontal
+  SlidersHorizontal,
+  ChevronDown,
+  Table,
+  LayoutGrid,
+  ListChecks,
+  Image as ImageIcon
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useUser } from "@/components/providers/supabase-provider";
@@ -63,6 +71,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
   DropdownMenuTrigger,
   DropdownMenuSeparator,
   DropdownMenuSub,
@@ -137,6 +146,7 @@ const DocumentIdPage = ({ params }: DocumentIdPageProps) => {
       ? use(params as Promise<any>)
       : (params as any);
   const { documentId } = resolvedParams;
+  const router = useRouter();
   const [editor, setEditor] = useState<BlockNoteEditor | null>(null);
   const [projectTab, setProjectTab] = useState<"content" | "tasks" | "meetings" | "docs" | any>("content");
   const [showHiddenProperties, setShowHiddenProperties] = useState(false);
@@ -275,6 +285,95 @@ const DocumentIdPage = ({ params }: DocumentIdPageProps) => {
   const isFullWidth = doc?.fullWidth ?? true;
   const isSmallText = doc?.smallText ?? false;
   const showToc = doc?.showToc ?? true;
+
+  const [isWiki, setIsWiki] = useState(false);
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem("wikiPageIds");
+      if (stored) {
+        setIsWiki(JSON.parse(stored).includes(documentId));
+      } else {
+        setIsWiki(false);
+      }
+    } catch {
+      setIsWiki(false);
+    }
+  }, [documentId]);
+
+  const subpages = useQuery(api.documents.getSidebar, {
+    parentDocument: documentId,
+  });
+
+  const createSubpage = useMutation(api.documents.create);
+
+  const [wikiConfig, setWikiConfig] = useState<any>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const stored = localStorage.getItem(`wiki_config_${documentId}`);
+        if (stored) return JSON.parse(stored);
+      } catch {}
+    }
+    return {
+      type: "database",
+      viewType: "gallery",
+      views: ["gallery"],
+      properties: [
+        {
+          id: "status",
+          name: "Status",
+          type: "select" as const,
+          options: ["To Do", "In Progress", "Done"],
+        }
+      ]
+    };
+  });
+
+  const handleUpdateWikiConfig = (newConfig: any) => {
+    setWikiConfig(newConfig);
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.setItem(`wiki_config_${documentId}`, JSON.stringify(newConfig));
+      } catch {}
+    }
+  };
+
+  const handleCreateWikiSubpage = async (category: "team" | "policy" | "new") => {
+    let title = "New Page";
+    if (category === "team") {
+      title = "New Team Page";
+    } else if (category === "policy") {
+      title = "New Policy Page";
+    }
+
+    const defaultDbContent = JSON.stringify({
+      type: "database",
+      viewType: "gallery",
+      views: ["gallery"],
+      properties: [
+        {
+          id: "status",
+          name: "Status",
+          type: "select",
+          options: ["To Do", "In Progress", "Done"]
+        }
+      ]
+    }, null, 2);
+
+    const promise = createSubpage({
+      title,
+      parentDocument: documentId,
+      content: defaultDbContent,
+    }).then((newDocId) => {
+      router.push(`/documents/${newDocId}`);
+    });
+
+    toast.promise(promise, {
+      loading: `Creating new ${category} page...`,
+      success: `New ${category} page created!`,
+      error: `Failed to create ${category} page.`,
+    });
+  };
 
   const createVersion = useMutation(api.documents.createVersion);
 
@@ -770,9 +869,19 @@ const DocumentIdPage = ({ params }: DocumentIdPageProps) => {
                                 />
                               ) : (
                                 <input
+                                  key={p.id + "-" + val}
                                   type="text"
-                                  value={val}
-                                  onChange={(e) => handleUpdateProperty(p.id, e.target.value)}
+                                  defaultValue={val}
+                                  onBlur={(e) => {
+                                    if (e.target.value !== val) {
+                                      handleUpdateProperty(p.id, e.target.value);
+                                    }
+                                  }}
+                                  onKeyDown={(e) => {
+                                    if (e.key === "Enter") {
+                                      e.currentTarget.blur();
+                                    }
+                                  }}
                                   placeholder="Empty"
                                   className="w-full px-3 py-1.5 text-sm rounded-md bg-transparent border border-transparent hover:border-neutral-200 dark:hover:border-neutral-750 focus:border-neutral-200 dark:focus:border-neutral-750 focus:ring-1 focus:ring-blue-500 outline-hidden dark:text-neutral-200"
                                 />
@@ -879,13 +988,13 @@ const DocumentIdPage = ({ params }: DocumentIdPageProps) => {
         );
       })()}
         {isProjectPage ? (
-          <div className="space-y-6">
+          <div className="space-y-6 w-full overflow-hidden">
             {/* Project Tabs Bar */}
-            <div className="flex items-center gap-x-2 border-b border-neutral-200 dark:border-neutral-800 pb-2 mb-6">
+            <div className="flex items-center gap-x-2 border-b border-neutral-200 dark:border-neutral-800 pb-2 mb-6 overflow-x-auto scrollbar-none">
               <button
                 onClick={() => setProjectTab("content")}
                 className={cn(
-                  "flex items-center gap-x-2 px-3 py-1.5 text-xs font-semibold rounded-md transition",
+                  "flex items-center gap-x-2 px-3 py-1.5 text-xs font-semibold rounded-md transition shrink-0",
                   projectTab === "content"
                     ? "bg-neutral-200 dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100"
                     : "text-muted-foreground hover:bg-neutral-100 dark:hover:bg-neutral-800/40"
@@ -897,7 +1006,7 @@ const DocumentIdPage = ({ params }: DocumentIdPageProps) => {
               <button
                 onClick={() => setProjectTab("tasks")}
                 className={cn(
-                  "flex items-center gap-x-2 px-3 py-1.5 text-xs font-semibold rounded-md transition",
+                  "flex items-center gap-x-2 px-3 py-1.5 text-xs font-semibold rounded-md transition shrink-0",
                   projectTab === "tasks"
                     ? "bg-neutral-200 dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100"
                     : "text-muted-foreground hover:bg-neutral-100 dark:hover:bg-neutral-800/40"
@@ -909,7 +1018,7 @@ const DocumentIdPage = ({ params }: DocumentIdPageProps) => {
               <button
                 onClick={() => setProjectTab("meetings")}
                 className={cn(
-                  "flex items-center gap-x-2 px-3 py-1.5 text-xs font-semibold rounded-md transition",
+                  "flex items-center gap-x-2 px-3 py-1.5 text-xs font-semibold rounded-md transition shrink-0",
                   projectTab === "meetings"
                     ? "bg-neutral-200 dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100"
                     : "text-muted-foreground hover:bg-neutral-100 dark:hover:bg-neutral-800/40"
@@ -921,7 +1030,7 @@ const DocumentIdPage = ({ params }: DocumentIdPageProps) => {
               <button
                 onClick={() => setProjectTab("docs")}
                 className={cn(
-                  "flex items-center gap-x-2 px-3 py-1.5 text-xs font-semibold rounded-md transition",
+                  "flex items-center gap-x-2 px-3 py-1.5 text-xs font-semibold rounded-md transition shrink-0",
                   projectTab === "docs"
                     ? "bg-neutral-200 dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100"
                     : "text-muted-foreground hover:bg-neutral-100 dark:hover:bg-neutral-800/40"
@@ -949,7 +1058,7 @@ const DocumentIdPage = ({ params }: DocumentIdPageProps) => {
             )}
 
             {projectTab === "tasks" && (
-              <div className="space-y-4">
+              <div className="space-y-4 w-full overflow-hidden">
                 {tasksDb ? (
                   <KanbanBoard
                     documentId={tasksDb._id}
@@ -964,7 +1073,7 @@ const DocumentIdPage = ({ params }: DocumentIdPageProps) => {
             )}
 
             {projectTab === "meetings" && (
-              <div className="space-y-4">
+              <div className="space-y-4 w-full overflow-hidden">
                 {meetingsDb ? (
                   <TableView
                     documentId={meetingsDb._id}
@@ -979,7 +1088,7 @@ const DocumentIdPage = ({ params }: DocumentIdPageProps) => {
             )}
 
             {projectTab === "docs" && (
-              <div className="space-y-4">
+              <div className="space-y-4 w-full overflow-hidden">
                 {docsDb ? (
                   <TableView
                     documentId={docsDb._id}
@@ -992,6 +1101,267 @@ const DocumentIdPage = ({ params }: DocumentIdPageProps) => {
                 )}
               </div>
             )}
+          </div>
+        ) : isWiki ? (
+          <div className="space-y-6 w-full">
+            {/* Sub-header Bar */}
+            <div className="flex items-center justify-between border-b border-neutral-200 dark:border-neutral-800 pb-2 mb-4 text-xs">
+              <button className="flex items-center gap-x-1 px-3 py-1.5 bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 rounded-md font-semibold text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white transition cursor-pointer select-none">
+                <span>🏠</span>
+                <span>Home</span>
+                <ChevronDown className="h-3 w-3" />
+              </button>
+              <button className="flex items-center gap-x-1.5 text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-250 cursor-pointer">
+                <Search className="h-3.5 w-3.5" />
+                <span>Search</span>
+              </button>
+            </div>
+
+            {/* Description/Tip Box */}
+            <div className="text-xs text-muted-foreground leading-relaxed">
+              Convert all those scattered pages into a Zotion database with one click — while keeping the easy-to-read page format.
+            </div>
+
+            <div className="bg-neutral-50 dark:bg-neutral-900/40 border border-neutral-200 dark:border-neutral-800 rounded-xl p-4 mb-6 text-xs text-neutral-600 dark:text-neutral-455 flex items-start gap-x-3">
+              <span className="text-base select-none shrink-0">💡</span>
+              <div>
+                <span className="font-semibold text-neutral-800 dark:text-neutral-200">Zotion Tip: </span>
+                Use this template to organize important information for your team. Add owners, verification, and tags to pages to keep them up to date. Just replace this sample content with your own.
+              </div>
+            </div>
+
+            {/* Wiki Grid Layout */}
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
+              {/* Left Column: Subpage Categories */}
+              <div className="md:col-span-4 space-y-6 border-r border-neutral-100 dark:border-neutral-900/60 pr-4">
+                {(() => {
+                  const subs = subpages || [];
+                  const teamSubs = subs.filter((s) =>
+                    /started|mission|vision|values|travel|press|about|guide|team|meet|corporate/i.test(s.title || "")
+                  );
+                  const policySubs = subs.filter((s) =>
+                    /policy|policies|vacation|morale|benefit|benefits|rule|rules|hr|conduct/i.test(s.title || "")
+                  );
+                  const newPageSubs = subs.filter(
+                    (s) => !teamSubs.includes(s) && !policySubs.includes(s)
+                  );
+
+                  return (
+                    <>
+                      {/* Team Section */}
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <h4 className="text-sm font-bold text-neutral-850 dark:text-neutral-200 tracking-tight">Team</h4>
+                          <button
+                            onClick={() => handleCreateWikiSubpage("team")}
+                            className="p-1 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-md transition text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-250 cursor-pointer"
+                            title="Add team page"
+                          >
+                            <Plus className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                        <div className="space-y-1">
+                          {teamSubs.map((s) => (
+                            <a
+                              key={s._id}
+                              href={`/documents/${s._id}`}
+                              className="flex items-center gap-x-2 text-xs font-medium text-blue-600 dark:text-blue-400 hover:underline py-1"
+                            >
+                              {s.icon ? <span>{s.icon}</span> : <span>📄</span>}
+                              <span>{s.title || "Untitled"}</span>
+                            </a>
+                          ))}
+                          {teamSubs.length === 0 && <span className="text-[11px] text-muted-foreground italic">No team pages yet.</span>}
+                        </div>
+                      </div>
+
+                      {/* Policies Section */}
+                      <div className="space-y-2 pt-2">
+                        <div className="flex items-center justify-between">
+                          <h4 className="text-sm font-bold text-neutral-855 dark:text-neutral-200 tracking-tight">Policies</h4>
+                          <button
+                            onClick={() => handleCreateWikiSubpage("policy")}
+                            className="p-1 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-md transition text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-250 cursor-pointer"
+                            title="Add policy page"
+                          >
+                            <Plus className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                        <div className="space-y-1">
+                          {policySubs.map((s) => (
+                            <a
+                              key={s._id}
+                              href={`/documents/${s._id}`}
+                              className="flex items-center gap-x-2 text-xs font-medium text-blue-600 dark:text-blue-400 hover:underline py-1"
+                            >
+                              {s.icon ? <span>{s.icon}</span> : <span>📄</span>}
+                              <span>{s.title || "Untitled"}</span>
+                            </a>
+                          ))}
+                          {policySubs.length === 0 && <span className="text-[11px] text-muted-foreground italic">No policy pages yet.</span>}
+                        </div>
+                      </div>
+
+                      {/* New Pages Section */}
+                      <div className="space-y-2 pt-2">
+                        <div className="flex items-center justify-between">
+                          <h4 className="text-sm font-bold text-neutral-855 dark:text-neutral-200 tracking-tight">New Pages</h4>
+                          <button
+                            onClick={() => handleCreateWikiSubpage("new")}
+                            className="p-1 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-md transition text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-250 cursor-pointer"
+                            title="Add new page"
+                          >
+                            <Plus className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                        <div className="space-y-1">
+                          {newPageSubs.map((s) => (
+                            <a
+                              key={s._id}
+                              href={`/documents/${s._id}`}
+                              className="flex items-center gap-x-2 text-xs font-medium text-blue-600 dark:text-blue-400 hover:underline py-1"
+                            >
+                              {s.icon ? <span>{s.icon}</span> : <span>📄</span>}
+                              <span>{s.title || "Untitled"}</span>
+                            </a>
+                          ))}
+                          {newPageSubs.length === 0 && <span className="text-[11px] text-muted-foreground italic">No subpages yet.</span>}
+                        </div>
+                      </div>
+                    </>
+                  );
+                })()}
+              </div>
+
+              {/* Right Column: Dynamic View of Subpages */}
+              <div className="md:col-span-8 overflow-hidden w-full">
+                <div className="border border-neutral-200 dark:border-neutral-800 rounded-xl p-3.5 bg-white dark:bg-neutral-900/40">
+                  
+                  {/* View Switcher Tabs Header */}
+                  <div className="flex items-center justify-between border-b border-neutral-100 dark:border-neutral-900 pb-2 mb-4">
+                    <div className="flex items-center gap-x-1">
+                      {[
+                        { key: "gallery", label: "Gallery", Icon: ImageIcon },
+                        { key: "board", label: "Board", Icon: LayoutGrid },
+                        { key: "table", label: "Table", Icon: Table },
+                        { key: "todo", label: "List", Icon: ListChecks },
+                      ]
+                        .filter((t) => (wikiConfig.views || ["gallery"]).includes(t.key))
+                        .map((t) => {
+                          const Icon = t.Icon;
+                          const isActive = wikiConfig.viewType === t.key;
+                          return (
+                            <button
+                              key={t.key}
+                              onClick={() => handleUpdateWikiConfig({ ...wikiConfig, viewType: t.key })}
+                              className={cn(
+                                "flex items-center gap-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold select-none transition-colors cursor-pointer",
+                                isActive
+                                  ? "bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-white font-bold"
+                                  : "text-neutral-500 hover:text-neutral-700 dark:text-neutral-450 dark:hover:text-neutral-250"
+                              )}
+                            >
+                              <Icon className="h-3.5 w-3.5" />
+                              <span>{t.label} View</span>
+                            </button>
+                          );
+                        })}
+
+                      {/* Add View Dropdown */}
+                      {[
+                        { key: "gallery", label: "Gallery", Icon: ImageIcon },
+                        { key: "board", label: "Board", Icon: LayoutGrid },
+                        { key: "table", label: "Table", Icon: Table },
+                        { key: "todo", label: "List", Icon: ListChecks },
+                      ].filter((t) => !(wikiConfig.views || ["gallery"]).includes(t.key)).length > 0 && (
+                        <DropdownMenu>
+                          <DropdownMenuTrigger className="flex items-center gap-x-1 px-2 py-1.5 rounded-lg text-xs text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300 transition outline-hidden cursor-pointer">
+                            <Plus className="h-3.5 w-3.5" />
+                            <span>Add View</span>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="start" className="dark:bg-neutral-900">
+                            <DropdownMenuLabel className="text-[10px]">Add View Type</DropdownMenuLabel>
+                            {[
+                              { key: "gallery", label: "Gallery", Icon: ImageIcon },
+                              { key: "board", label: "Board", Icon: LayoutGrid },
+                              { key: "table", label: "Table", Icon: Table },
+                              { key: "todo", label: "List", Icon: ListChecks },
+                            ]
+                              .filter((t) => !(wikiConfig.views || ["gallery"]).includes(t.key))
+                              .map((t) => {
+                                const Icon = t.Icon;
+                                return (
+                                  <DropdownMenuItem
+                                    key={t.key}
+                                    onClick={() => handleUpdateWikiConfig({
+                                      ...wikiConfig,
+                                      viewType: t.key,
+                                      views: [...(wikiConfig.views || ["gallery"]), t.key],
+                                    })}
+                                    className="text-xs cursor-pointer flex items-center gap-x-2"
+                                  >
+                                    <Icon className="h-3.5 w-3.5 mr-2" />
+                                    <span>{t.label} View</span>
+                                  </DropdownMenuItem>
+                                );
+                              })}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Render active view */}
+                  {wikiConfig.viewType === "gallery" && (
+                    <GalleryView
+                      documentId={documentId}
+                      config={wikiConfig}
+                      subpages={subpages || []}
+                      preview={false}
+                      onAddRow={() => handleCreateWikiSubpage("new")}
+                    />
+                  )}
+                  {wikiConfig.viewType === "board" && (
+                    <KanbanBoard
+                      documentId={documentId}
+                      config={wikiConfig}
+                      subpages={subpages || []}
+                      preview={false}
+                    />
+                  )}
+                  {wikiConfig.viewType === "table" && (
+                    <TableView
+                      documentId={documentId}
+                      config={wikiConfig}
+                      subpages={subpages || []}
+                      preview={false}
+                    />
+                  )}
+                  {wikiConfig.viewType === "todo" && (
+                    <TodoView
+                      documentId={documentId}
+                      config={wikiConfig}
+                      subpages={subpages || []}
+                      preview={false}
+                    />
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Editor Area Below */}
+            <div className="mt-8 pt-8 border-t border-neutral-200 dark:border-neutral-800">
+              <div className="text-muted-foreground text-xs mb-3 italic">Press 'space' for AI or '/' for commands</div>
+              <Editor
+                key={documentId}
+                documentId={documentId}
+                onChange={onChange}
+                initialContent={editorInitialContent}
+                smallText={isSmallText}
+                onEditorReady={setEditor}
+                editorFont={activeFont}
+              />
+            </div>
           </div>
         ) : (
           isDb ? (
@@ -1013,7 +1383,7 @@ const DocumentIdPage = ({ params }: DocumentIdPageProps) => {
             </>
           )
         )}
-        <SubpagesList documentId={documentId} />
+        {!isWiki && <SubpagesList documentId={documentId} />}
       </div>
       <HistorySidebar />
     </div>

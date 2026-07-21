@@ -72,7 +72,7 @@ export default function PricingPage() {
   ];
 
   return (
-    <div className="dark:bg-dark min-h-screen text-foreground transition-colors duration-300 py-16">
+    <div className="dark:bg-dark min-h-screen text-foreground transition-colors duration-300 pt-4 pb-16">
       <div className="mx-auto max-w-7xl px-6 text-center">
         <h1 className="text-4xl sm:text-5xl font-bold tracking-tight">
           One workspace. <br /> Simple, transparent pricing.

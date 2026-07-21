@@ -31,14 +31,14 @@ export const Title = ({ initialData }: TitleProps) => {
 
   const disabledInput = () => {
     setIsEditing(false);
+    update({
+      id: initialData._id,
+      title: title || "Untitled",
+    });
   };
 
   const onChange = (event: ChangeEvent<HTMLInputElement>) => {
     setTitle(event.target.value);
-    update({
-      id: initialData._id,
-      title: event.target.value || "Untitled",
-    });
   };
 
   const onKeyDown = (event: React.KeyboardEvent) => {
