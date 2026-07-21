@@ -68,9 +68,16 @@ export const AuthModal = () => {
       <DialogContent className="sm:max-w-[420px] rounded-xl dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 p-6 shadow-xl">
         <DialogHeader className="space-y-2 mb-6">
           <div className="flex justify-center mb-2">
-            <div className="h-10 w-10 rounded-lg bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center font-bold text-xl border border-neutral-200 dark:border-neutral-700">
-              Z
-            </div>
+            <img
+              src="/logo.svg"
+              alt="App Logo"
+              className="h-10 w-auto block dark:hidden"
+            />
+            <img
+              src="/logo-dark.svg"
+              alt="App Logo"
+              className="h-10 w-auto hidden dark:block"
+            />
           </div>
           <h2 className="text-2xl font-bold tracking-tight text-center text-neutral-900 dark:text-neutral-50">
             Welcome to Zotion
@@ -93,13 +100,12 @@ export const AuthModal = () => {
             variant="outline"
             className="w-full flex items-center justify-center gap-x-3 py-6 border border-neutral-200 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition duration-200 font-medium"
           >
-            <svg className="h-5 w-5" viewBox="0 0 24 24" width="24" height="24" xmlns="http://www.w3.org/2000/svg">
-              <g transform="matrix(1, 0, 0, 1, 0, 0)">
-                <path d="M21.35,11.1H12v2.7h5.38C16.88,15.68,14.76,17,12,17a5,5,0,0,1-5-5,5,5,0,0,1,5-5,4.78,4.78,0,0,1,3.31,1.3l2-2A7.91,7.91,0,0,0,12,4a8,8,0,0,0-8,8,8,8,0,0,0,8,8c4.42,0,8-3.58,8-8A7.32,7.32,0,0,0,21.35,11.1Z" fill="#4285F4"/>
-                <path d="M12,20a8,8,0,0,0,8-8H12v3.3h5.38c-.5,1.28-2.62,2.6-5.38,2.6a5,5,0,0,1-5-5c0-.1.05-.18.06-.27L4.35,16A7.94,7.94,0,0,0,12,20Z" fill="#34A853"/>
-                <path d="M12,4a7.91,7.91,0,0,0-5.31,2.3L4.31,4.3A7.94,7.94,0,0,0,12,4Z" fill="#EA4335"/>
-                <path d="M7,12a5,5,0,0,1,5-5h0L9.31,4.7A7.94,7.94,0,0,0,4,12a7.94,7.94,0,0,0,.35,2.27l2.71-2.09A4.89,4.89,0,0,1,7,12Z" fill="#FBBC05"/>
-              </g>
+            <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
+              <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+              <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+              <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+              <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+              <path fill="none" d="M0 0h48v48H0z"/>
             </svg>
             Continue with Google
           </Button>
