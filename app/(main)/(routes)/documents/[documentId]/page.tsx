@@ -130,6 +130,8 @@ const PROPERTY_ICONS: Record<string, any> = {
   id: Hash,
 };
 
+import { MetaHead } from "@/components/seo/meta-head";
+
 interface DocumentIdPageProps {
   params:
     | Promise<{
@@ -653,6 +655,10 @@ const DocumentIdPage = ({ params }: DocumentIdPageProps) => {
 
   return (
     <div className="pb-35">
+      <MetaHead 
+        title={`${doc.title || "Untitled"} - Zotion Workspace`}
+        description={`View and edit ${doc.title || "document"} in Zotion connected workspace.`}
+      />
       <Cover url={doc.coverImage} />
       <div
         className={`relative mx-auto px-10 md:px-16 md:w-[90%] ${

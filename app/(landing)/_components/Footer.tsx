@@ -1,6 +1,6 @@
 import { Logo } from "./Logo";
 import Link from "next/link";
-import { Github, Twitter, Youtube, Globe, Heart } from "lucide-react";
+import { Github, Twitter, Youtube, Linkedin, Instagram, MessageSquare, Facebook, Share2, AtSign, Globe, Heart } from "lucide-react";
 
 export const Footer = () => {
   return (
@@ -13,18 +13,33 @@ export const Footer = () => {
             <p className="mt-2 text-sm max-w-xs leading-relaxed text-muted-foreground/80">
               The connected workspace where better, faster work happens. Plan, write, collaborate, and get organized.
             </p>
-            <div className="flex gap-x-3 mt-4">
-              <Link href="https://github.com" target="_blank" className="p-2 rounded-full hover:bg-neutral-100 dark:hover:bg-neutral-800 transition duration-200 hover:text-foreground">
-                <Github className="h-5 w-5" />
+            <div className="flex flex-wrap gap-2 mt-4">
+              <Link href="https://github.com/zotion-app" target="_blank" title="GitHub" className="p-2 rounded-full hover:bg-neutral-100 dark:hover:bg-neutral-800 transition duration-200 hover:text-foreground">
+                <Github className="h-4 w-4" />
               </Link>
-              <Link href="https://twitter.com" target="_blank" className="p-2 rounded-full hover:bg-neutral-100 dark:hover:bg-neutral-800 transition duration-200 hover:text-foreground">
-                <Twitter className="h-5 w-5" />
+              <Link href="https://x.com/zotion_app" target="_blank" title="Twitter / X" className="p-2 rounded-full hover:bg-neutral-100 dark:hover:bg-neutral-800 transition duration-200 hover:text-foreground">
+                <Twitter className="h-4 w-4" />
               </Link>
-              <Link href="https://youtube.com" target="_blank" className="p-2 rounded-full hover:bg-neutral-100 dark:hover:bg-neutral-800 transition duration-200 hover:text-foreground">
-                <Youtube className="h-5 w-5" />
+              <Link href="https://linkedin.com/company/zotion" target="_blank" title="LinkedIn" className="p-2 rounded-full hover:bg-neutral-100 dark:hover:bg-neutral-800 transition duration-200 hover:text-foreground">
+                <Linkedin className="h-4 w-4" />
               </Link>
-              <Link href="#" className="p-2 rounded-full hover:bg-neutral-100 dark:hover:bg-neutral-800 transition duration-200 hover:text-foreground">
-                <Globe className="h-5 w-5" />
+              <Link href="https://youtube.com/@zotion" target="_blank" title="YouTube" className="p-2 rounded-full hover:bg-neutral-100 dark:hover:bg-neutral-800 transition duration-200 hover:text-foreground">
+                <Youtube className="h-4 w-4" />
+              </Link>
+              <Link href="https://discord.gg/zotion" target="_blank" title="Discord" className="p-2 rounded-full hover:bg-neutral-100 dark:hover:bg-neutral-800 transition duration-200 hover:text-foreground">
+                <MessageSquare className="h-4 w-4" />
+              </Link>
+              <Link href="https://instagram.com/zotionapp" target="_blank" title="Instagram" className="p-2 rounded-full hover:bg-neutral-100 dark:hover:bg-neutral-800 transition duration-200 hover:text-foreground">
+                <Instagram className="h-4 w-4" />
+              </Link>
+              <Link href="https://reddit.com/r/zotion" target="_blank" title="Reddit" className="p-2 rounded-full hover:bg-neutral-100 dark:hover:bg-neutral-800 transition duration-200 hover:text-foreground">
+                <Share2 className="h-4 w-4" />
+              </Link>
+              <Link href="https://facebook.com/zotionapp" target="_blank" title="Facebook" className="p-2 rounded-full hover:bg-neutral-100 dark:hover:bg-neutral-800 transition duration-200 hover:text-foreground">
+                <Facebook className="h-4 w-4" />
+              </Link>
+              <Link href="https://threads.net/@zotionapp" target="_blank" title="Threads" className="p-2 rounded-full hover:bg-neutral-100 dark:hover:bg-neutral-800 transition duration-200 hover:text-foreground">
+                <AtSign className="h-4 w-4" />
               </Link>
             </div>
           </div>

@@ -1,5 +1,6 @@
 import React from "react";
 import { Compass, Users, Heart, Sparkles } from "lucide-react";
+import { MetaHead } from "@/components/seo/meta-head";
 
 export default function AboutPage() {
   const values = [
@@ -22,6 +23,10 @@ export default function AboutPage() {
 
   return (
     <div className="dark:bg-dark min-h-screen text-foreground transition-colors duration-300 pt-4 pb-16">
+      <MetaHead 
+        title="About Us - Zotion Collaborative Layer"
+        description="Learn about Zotion's mission to craft the connected workspace for remote teams, creative thinkers, and modern organizers worldwide."
+      />
       <div className="mx-auto max-w-5xl px-6">
         {/* Mission */}
         <div className="text-center max-w-3xl mx-auto mb-20">

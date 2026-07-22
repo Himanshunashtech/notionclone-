@@ -11,6 +11,8 @@ import { useRouter } from "next/navigation";
 import { useCustomLandingPage } from "@/hooks/useCustomLandingPage";
 import { useEffect } from "react";
 
+import { MetaHead } from "@/components/seo/meta-head";
+
 const DocumentsPage = () => {
   const { user } = useUser();
   const router = useRouter();
@@ -45,6 +47,10 @@ const DocumentsPage = () => {
 
   return (
     <div className="flex h-full flex-col items-center justify-center space-y-4">
+      <MetaHead 
+        title={`${user?.firstName ? `${user.firstName}'s ` : ''}Documents - Zotion Workspace`}
+        description="Access and manage your documents, wikis, and notes in Zotion workspace."
+      />
       <Image
         src="/empty.svg"
         alt="empty"

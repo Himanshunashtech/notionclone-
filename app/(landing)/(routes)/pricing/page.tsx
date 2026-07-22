@@ -2,6 +2,7 @@ import React from "react";
 import { Check, HelpCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
+import { MetaHead } from "@/components/seo/meta-head";
 
 export default function PricingPage() {
   const tiers = [
@@ -73,6 +74,10 @@ export default function PricingPage() {
 
   return (
     <div className="dark:bg-dark min-h-screen text-foreground transition-colors duration-300 pt-4 pb-16">
+      <MetaHead 
+        title="Pricing Plans & Subscriptions - Zotion Workspace"
+        description="Choose the perfect Zotion plan. Free for individuals, affordable Plus & Business tiers for growing teams, and customized enterprise solutions."
+      />
       <div className="mx-auto max-w-7xl px-6 text-center">
         <h1 className="text-4xl sm:text-5xl font-bold tracking-tight">
           One workspace. <br /> Simple, transparent pricing.
