@@ -291,16 +291,25 @@ const DocumentIdPage = ({ params }: DocumentIdPageProps) => {
   const [isWiki, setIsWiki] = useState(false);
 
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem("wikiPageIds");
-      if (stored) {
-        setIsWiki(JSON.parse(stored).includes(documentId));
-      } else {
+    const checkWiki = () => {
+      try {
+        const stored = localStorage.getItem("wikiPageIds");
+        if (stored) {
+          setIsWiki(JSON.parse(stored).includes(documentId));
+        } else {
+          setIsWiki(false);
+        }
+      } catch {
         setIsWiki(false);
       }
-    } catch {
-      setIsWiki(false);
-    }
+    };
+    checkWiki();
+    window.addEventListener("wiki-status-changed", checkWiki);
+    window.addEventListener("storage", checkWiki);
+    return () => {
+      window.removeEventListener("wiki-status-changed", checkWiki);
+      window.removeEventListener("storage", checkWiki);
+    };
   }, [documentId]);
 
   const subpages = useQuery(api.documents.getSidebar, {
@@ -379,6 +388,12 @@ const DocumentIdPage = ({ params }: DocumentIdPageProps) => {
 
   const createVersion = useMutation(api.documents.createVersion);
 
+  const [overrideContent, setOverrideContent] = useState<string | null>(null);
+
+  useEffect(() => {
+    setOverrideContent(null);
+  }, [doc?.content]);
+
   const onChange = (newEditorContent: string) => {
     let finalContent = newEditorContent;
     if (doc && isDatabaseRow(doc.content)) {
@@ -427,16 +442,18 @@ const DocumentIdPage = ({ params }: DocumentIdPageProps) => {
   }
 
   const handleSelectTemplate = (type: "table" | "board" | "todo" | "document", content: string) => {
+    setOverrideContent(content);
     update({
       id: documentId,
       content,
     });
   };
 
-  const isDb = isDatabase(doc.content);
-  const isEmpty = !doc.content || doc.content === "";
+  const currentContent = overrideContent !== null ? overrideContent : doc.content;
+  const isDb = isDatabase(currentContent);
+  const isEmpty = !currentContent || currentContent === "";
 
-  const rowData = parseDatabaseRow(doc.content);
+  const rowData = parseDatabaseRow(currentContent);
   const linkedTaskIds = rowData.values["tasks"] ? rowData.values["tasks"].split(",").filter(Boolean) : [];
   const linkedMeetingIds = rowData.values["meetings"] ? rowData.values["meetings"].split(",").filter(Boolean) : [];
   const linkedDocIds = rowData.values["docs"] ? rowData.values["docs"].split(",").filter(Boolean) : [];
@@ -661,8 +678,8 @@ const DocumentIdPage = ({ params }: DocumentIdPageProps) => {
       />
       <Cover url={doc.coverImage} />
       <div
-        className={`relative mx-auto px-10 md:px-16 md:w-[90%] ${
-          !isFullWidth ? "max-w-200" : ""
+        className={`relative mx-auto px-4 md:px-8 w-full ${
+          !isFullWidth && !isDatabase ? "max-w-4xl" : "w-full"
         }`}
       >
         <Toolbar initialData={doc} editorFont={activeFont} />
@@ -1373,7 +1390,7 @@ const DocumentIdPage = ({ params }: DocumentIdPageProps) => {
           isDb ? (
             <DatabaseView
               documentId={documentId}
-              initialContent={doc.content}
+              initialContent={currentContent}
             />
           ) : (
             <>

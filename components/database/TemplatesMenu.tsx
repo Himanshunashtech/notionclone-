@@ -1,6 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
+import Image from "next/image";
 import {
   FileText,
   KanbanSquare,
@@ -358,20 +359,19 @@ export const TemplatesMenu = ({ documentId: _documentId, onSelect }: TemplatesMe
       {/* Template grid */}
       <div className="grid grid-cols-2 gap-3 p-5">
         {filtered.map((tmpl) => {
-          const colors = COLOR_MAP[tmpl.color] ?? COLOR_MAP["sky"];
           return (
             <Button
               key={tmpl.label}
               variant="outline"
-              className={`group h-auto flex flex-col items-start gap-y-1.5 p-4 border-neutral-200 dark:border-neutral-800 text-left transition ${colors.hover}`}
+              className="group h-auto flex flex-col items-start gap-y-1.5 p-4 border-neutral-200 dark:border-neutral-800 bg-neutral-100/70 dark:bg-neutral-900/60 hover:bg-neutral-200/70 dark:hover:bg-neutral-800 text-left transition"
               onClick={() => {
                 const content = tmpl.label === "Meeting Notes" ? getMeetingNotesContent() : tmpl.content;
                 onSelect(tmpl.type, content);
               }}
             >
-              <span className={`text-neutral-400 transition ${colors.bg}`}>
+              <div className="p-1.5 rounded-lg bg-neutral-200/70 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 transition">
                 {tmpl.icon}
-              </span>
+              </div>
               <span className="text-sm font-semibold text-neutral-800 dark:text-neutral-200 leading-tight">
                 {tmpl.label}
               </span>

@@ -29,6 +29,7 @@ import {
   MoreHorizontal,
   Library as LibraryIcon,
   Calendar,
+  Store,
 } from "lucide-react";
 import {
   Popover,
@@ -118,7 +119,27 @@ const Navigation = () => {
   const saveTeamspaces = (ids: string[]) => {
     setTeamspaceIds(ids);
     localStorage.setItem("teamspaceIds", JSON.stringify(ids));
+    window.dispatchEvent(new CustomEvent("teamspace-status-changed"));
   };
+
+  useEffect(() => {
+    const handleTeamspacesChanged = () => {
+      try {
+        const stored = localStorage.getItem("teamspaceIds");
+        if (stored) {
+          setTeamspaceIds(JSON.parse(stored));
+        } else {
+          setTeamspaceIds([]);
+        }
+      } catch {}
+    };
+    window.addEventListener("teamspace-status-changed", handleTeamspacesChanged);
+    window.addEventListener("storage", handleTeamspacesChanged);
+    return () => {
+      window.removeEventListener("teamspace-status-changed", handleTeamspacesChanged);
+      window.removeEventListener("storage", handleTeamspacesChanged);
+    };
+  }, []);
 
   const seedChildDatabases = async (parentSpaceId: string) => {
     // 1. Create Projects first
@@ -242,8 +263,8 @@ const Navigation = () => {
     if (!name || !name.trim()) return;
 
     const promise = create({ title: name.trim() }).then(async (newId) => {
-      await seedChildDatabases(newId);
       saveTeamspaces([...teamspaceIds, newId]);
+      await seedChildDatabases(newId);
       router.push(`/documents/${newId}`);
     });
 
@@ -533,7 +554,6 @@ const Navigation = () => {
             onClick={search.onOpen}
             shortcut="Ctrl + K"
           />
-          <Item label="Settings" icon={Settings} onClick={settings.onOpen} />
           <Item onClick={() => router.push("/library")} label="Library" icon={LibraryIcon} />
           <CalendarHoverPanel>
             <Item onClick={() => router.push("/calendar")} label="Calendar" icon={Calendar} />
@@ -708,6 +728,7 @@ const Navigation = () => {
               </div>
             </ScrollableList>
           </div>
+          <Item onClick={() => router.push("/marketplace")} icon={Store} label="Marketplace" />
           <Item onClick={handleCreate} icon={Plus} label="Add a page" />
           <Popover>
             <PopoverTrigger className="mt-3 w-full">

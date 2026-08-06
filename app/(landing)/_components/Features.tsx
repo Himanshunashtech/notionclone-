@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 
 import Link from "next/link";
+import Image from "next/image";
 
 const words = [
   { text: "Create", bg: "bg-pink-100 dark:bg-pink-950/50", textCol: "text-pink-700 dark:text-pink-300", border: "border-pink-200/50", dot: "bg-pink-500" },
@@ -35,11 +36,6 @@ const words = [
 const myApps = [
   {
     icon: Users,
-    iconBg: "bg-blue-500/10",
-    iconColor: "text-blue-500",
-    accentColor: "text-blue-500",
-    gradientFrom: "from-blue-500/5",
-    borderHover: "hover:border-blue-300/50 dark:hover:border-blue-700/50",
     title: "Teamspace",
     description:
       "Collaborative shared workspaces for your entire team. Create named teamspaces with pre-seeded Projects, Meetings, Docs, Tasks, Goals, and Brainstorming sessions — all auto-structured and ready to use.",
@@ -49,11 +45,6 @@ const myApps = [
   },
   {
     icon: BookOpen,
-    iconBg: "bg-violet-500/10",
-    iconColor: "text-violet-500",
-    accentColor: "text-violet-500",
-    gradientFrom: "from-violet-500/5",
-    borderHover: "hover:border-violet-300/50 dark:hover:border-violet-700/50",
     title: "Project Wiki",
     description:
       "Build living knowledge bases and project documentation wikis. Organize nested hierarchical pages, embed database views, link to related documents, and maintain always-up-to-date specs and guides.",
@@ -63,11 +54,6 @@ const myApps = [
   },
   {
     icon: Calendar,
-    iconBg: "bg-rose-500/10",
-    iconColor: "text-rose-500",
-    accentColor: "text-rose-500",
-    gradientFrom: "from-rose-500/5",
-    borderHover: "hover:border-rose-300/50 dark:hover:border-rose-700/50",
     title: "Calendar & Timeline",
     description:
       "Schedule tasks, events, and sprints visually with the built-in Calendar view. Use the mini hover-panel calendar directly in the sidebar for quick date navigation, or the full calendar page for rich planning.",
@@ -77,11 +63,6 @@ const myApps = [
   },
   {
     icon: FileText,
-    iconBg: "bg-indigo-500/10",
-    iconColor: "text-indigo-500",
-    accentColor: "text-indigo-500",
-    gradientFrom: "from-indigo-500/5",
-    borderHover: "hover:border-indigo-300/50 dark:hover:border-indigo-700/50",
     title: "Rich Document Editor",
     description:
       "Write beautifully with the BlockNote-powered block editor. Supports headings, bullet lists, callouts, code blocks, images, dividers, and more — all with smooth drag-and-drop reordering.",
@@ -91,11 +72,6 @@ const myApps = [
   },
   {
     icon: Database,
-    iconBg: "bg-emerald-500/10",
-    iconColor: "text-emerald-500",
-    accentColor: "text-emerald-500",
-    gradientFrom: "from-emerald-500/5",
-    borderHover: "hover:border-emerald-300/50 dark:hover:border-emerald-700/50",
     title: "Powerful Database Views",
     description:
       "Transform your data into meaningful views. Switch between Table, Kanban Board, Chart/Analytics, List/Todo, Calendar, and Timeline views — all from the same dataset with live property editing.",
@@ -105,11 +81,6 @@ const myApps = [
   },
   {
     icon: Search,
-    iconBg: "bg-amber-500/10",
-    iconColor: "text-amber-500",
-    accentColor: "text-amber-500",
-    gradientFrom: "from-amber-500/5",
-    borderHover: "hover:border-amber-300/50 dark:hover:border-amber-700/50",
     title: "Quick Search",
     description:
       "Find any page, document, or wiki instantly using the global search command palette (Ctrl+K). Fuzzy-search across your entire workspace and jump directly to what you need.",
@@ -119,11 +90,6 @@ const myApps = [
   },
   {
     icon: BarChart2,
-    iconBg: "bg-cyan-500/10",
-    iconColor: "text-cyan-500",
-    accentColor: "text-cyan-500",
-    gradientFrom: "from-cyan-500/5",
-    borderHover: "hover:border-cyan-300/50 dark:hover:border-cyan-700/50",
     title: "Analytics & Charts",
     description:
       "Visualize your database data with live SVG Pie Charts and Bar Charts. Supports interactive tooltips, value distributions, and statistical aggregates like Sum, Average, Min, and Max.",
@@ -133,11 +99,6 @@ const myApps = [
   },
   {
     icon: Mic,
-    iconBg: "bg-fuchsia-500/10",
-    iconColor: "text-fuchsia-500",
-    accentColor: "text-fuchsia-500",
-    gradientFrom: "from-fuchsia-500/5",
-    borderHover: "hover:border-fuchsia-300/50 dark:hover:border-fuchsia-700/50",
     title: "Meeting Transcription",
     description:
       "Record and transcribe meetings directly in Zotion. AI-powered transcription captures everything, organized by speaker and timestamp, so your team never misses an action item.",
@@ -147,11 +108,6 @@ const myApps = [
   },
   {
     icon: Sliders,
-    iconBg: "bg-orange-500/10",
-    iconColor: "text-orange-500",
-    accentColor: "text-orange-500",
-    gradientFrom: "from-orange-500/5",
-    borderHover: "hover:border-orange-300/50 dark:hover:border-orange-700/50",
     title: "Editor Customizer",
     description:
       "Personalize your workspace exactly how you like it. Choose from multiple fonts, toggle full-width layout, set custom cover images, pick emoji icons, and switch between light and dark modes.",
@@ -283,24 +239,20 @@ export const Features = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           {myApps.map((app, i) => {
             const Icon = app.icon;
-            const isHovered = hoveredApp === i;
             return (
               <div
                 key={i}
                 onMouseEnter={() => setHoveredApp(i)}
                 onMouseLeave={() => setHoveredApp(null)}
-                className={`group relative border rounded-2xl p-6 bg-gradient-to-br ${app.gradientFrom} to-transparent bg-card/30 hover:bg-card hover:shadow-lg transition-all duration-300 flex flex-col justify-between cursor-default overflow-hidden ${app.borderHover}`}
+                className="group relative border border-neutral-200 dark:border-neutral-800 rounded-2xl p-6 bg-neutral-100/70 dark:bg-neutral-900/60 hover:bg-neutral-200/70 dark:hover:bg-neutral-850 hover:shadow-lg transition-all duration-300 flex flex-col justify-between cursor-default overflow-hidden"
               >
-                {/* Background glow */}
-                <div className={`absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none`} />
-
                 <div className="space-y-4 relative z-10">
                   {/* Header */}
                   <div className="flex items-start justify-between">
-                    <div className={`h-11 w-11 ${app.iconBg} rounded-xl flex items-center justify-center ${app.iconColor} transition-transform duration-300 group-hover:scale-110`}>
+                    <div className="h-11 w-11 bg-neutral-200/80 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 rounded-xl flex items-center justify-center transition-transform duration-300 group-hover:scale-110">
                       <Icon className="h-5 w-5" />
                     </div>
-                    <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${app.iconBg} ${app.accentColor} border-current/20 uppercase tracking-wider`}>
+                    <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full border border-neutral-300 dark:border-neutral-700 bg-neutral-200/60 dark:bg-neutral-800/80 text-neutral-700 dark:text-neutral-300 uppercase tracking-wider">
                       {app.badge}
                     </span>
                   </div>
@@ -317,7 +269,7 @@ export const Features = () => {
                   <ul className="space-y-1.5 mt-2">
                     {app.features.map((feat, j) => (
                       <li key={j} className="flex items-center gap-2 text-xs text-muted-foreground">
-                        <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${app.iconBg.replace("/10", "/60")} ${app.accentColor}`} style={{ background: "currentcolor" }}></span>
+                        <span className="w-1.5 h-1.5 rounded-full shrink-0 bg-neutral-400 dark:bg-neutral-500"></span>
                         {feat}
                       </li>
                     ))}
@@ -325,7 +277,7 @@ export const Features = () => {
                 </div>
 
                 {/* CTA */}
-                <div className={`text-xs font-semibold ${app.accentColor} mt-5 group-hover:translate-x-1 transition-transform duration-200 flex items-center gap-1 relative z-10`}>
+                <div className="text-xs font-semibold text-neutral-800 dark:text-neutral-200 mt-5 group-hover:translate-x-1 transition-transform duration-200 flex items-center gap-1 relative z-10">
                   {app.cta} <ArrowRight className="h-3 w-3" />
                 </div>
               </div>
@@ -337,7 +289,7 @@ export const Features = () => {
       {/* ── How It Works ── */}
       <div className="space-y-10">
         <div className="text-center space-y-3">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-violet-500/10 text-violet-600 dark:text-violet-400 text-xs font-semibold border border-violet-500/20 mb-2">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-neutral-200/70 dark:bg-neutral-800/70 text-neutral-700 dark:text-neutral-300 text-xs font-semibold border border-neutral-300 dark:border-neutral-700 mb-2">
             <LayoutDashboard className="h-3.5 w-3.5" />
             How It Works
           </div>
@@ -352,33 +304,27 @@ export const Features = () => {
             {
               step: "01",
               icon: Globe,
-              color: "text-blue-500",
-              bg: "bg-blue-500/10",
               title: "Sign In",
               desc: "Use Google or GitHub OAuth to instantly create your account — no password required.",
             },
             {
               step: "02",
               icon: FolderKanban,
-              color: "text-violet-500",
-              bg: "bg-violet-500/10",
               title: "Name Your Teamspace",
               desc: "Zotion auto-creates your workspace with Projects, Tasks, Docs, Meetings, Goals, and more.",
             },
             {
               step: "03",
               icon: CheckSquare,
-              color: "text-emerald-500",
-              bg: "bg-emerald-500/10",
               title: "Start Working",
               desc: "Write notes, manage databases, schedule tasks, and collaborate — all from one connected place.",
             },
           ].map((step, i) => (
-            <div key={i} className="relative border rounded-2xl p-6 bg-card/30 hover:bg-card hover:shadow-md transition duration-200 text-center group">
-              <div className={`w-12 h-12 ${step.bg} rounded-2xl flex items-center justify-center ${step.color} mx-auto mb-4 transition-transform duration-300 group-hover:scale-110`}>
+            <div key={i} className="relative border border-neutral-200 dark:border-neutral-800 rounded-2xl p-6 bg-neutral-100/70 dark:bg-neutral-900/60 hover:bg-neutral-200/70 dark:hover:bg-neutral-850 hover:shadow-md transition duration-200 text-center group">
+              <div className="w-12 h-12 bg-neutral-200/80 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 rounded-2xl flex items-center justify-center mx-auto mb-4 transition-transform duration-300 group-hover:scale-110">
                 <step.icon className="h-6 w-6" />
               </div>
-              <span className="text-[10px] font-black text-muted-foreground/40 tracking-widest uppercase">{step.step}</span>
+              <span className="text-[10px] font-black text-muted-foreground/50 tracking-widest uppercase">{step.step}</span>
               <h4 className="font-bold text-lg mt-1">{step.title}</h4>
               <p className="text-sm text-muted-foreground mt-2 leading-relaxed">{step.desc}</p>
             </div>

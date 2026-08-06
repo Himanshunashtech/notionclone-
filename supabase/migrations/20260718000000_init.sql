@@ -167,5 +167,8 @@ CREATE POLICY "Allow Authenticated Updates" ON storage.objects
   WITH CHECK (bucket_id = 'files' AND auth.uid() = owner);
 
 
-
+-- NEXT_PUBLIC_SUPABASE_URL=https://arjojssrtxsggnxcmiri.supabase.co
+-- NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFyam9qc3NydHhzZ2dueGNtaXJpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQxOTI3OTksImV4cCI6MjA5OTc2ODc5OX0.aAsHVDrEenlXaLQiwv8BT9oBWiYGcSKsd0cwBL6ZTtI
+-- NEXT_PUBLIC_GEMINI_API_KEY=your-gemini-api-key
+-- NEXT_PUBLIC_GOOGLE_CLIENT_ID=1077696862984-amk8qgv97ou6vdjgvuvia1jir7juv86u.apps.googleusercontent.com
 

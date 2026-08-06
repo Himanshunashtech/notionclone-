@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { useMutation } from "@/hooks/use-supabase-db";
 import { api } from "@/lib/supabase-db";
 import { toast } from "sonner";
@@ -597,10 +598,9 @@ const TemplateCardUI = ({
     form: { from: "from-violet-50/50", to: "to-violet-100/40", border: "border-violet-200" },
   };
 
-  // Dark card: gradient bg. Light card: soft pastel gradient bg.
-  const darkCard = `bg-gradient-to-br ${tmpl.bgFrom} ${tmpl.bgTo} ${tmpl.borderColor} text-white`;
-  const lightGrad = LIGHT_GRADIENTS[tmpl.id] || LIGHT_GRADIENTS.general;
-  const lightCard = `bg-gradient-to-br ${lightGrad.from} ${lightGrad.to} ${lightGrad.border} hover:shadow-md text-gray-900`;
+  // Clean gray styling for all template cards
+  const darkCard = `bg-neutral-900 border-neutral-800 hover:bg-neutral-850 hover:border-neutral-700 text-white`;
+  const lightCard = `bg-neutral-100/90 border-neutral-200/90 hover:bg-neutral-200/70 text-gray-900`;
 
   return (
     <button
@@ -615,7 +615,7 @@ const TemplateCardUI = ({
     >
       {/* Left: title + desc */}
       <div className="flex flex-col justify-start min-w-0 flex-shrink-0 w-[180px] sm:w-[220px] h-full overflow-y-auto scrollbar-none">
-        <span className="text-xl mb-1 shrink-0">{tmpl.emoji}</span>
+        <span className="text-lg mb-1 shrink-0 filter grayscale opacity-80">{tmpl.emoji}</span>
         <h3 className={`text-[12px] font-bold leading-tight ${isDark ? "text-white" : "text-gray-900"}`}>{tmpl.label}</h3>
         <p className={`text-[10px] mt-1 leading-normal line-clamp-2 ${isDark ? "text-white/50" : "text-gray-400"}`}>{tmpl.desc}</p>
       </div>

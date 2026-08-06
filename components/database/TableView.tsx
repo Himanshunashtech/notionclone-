@@ -34,7 +34,7 @@ import {
   Image,
   Paperclip
 } from "lucide-react";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -284,6 +284,12 @@ function MultiSelectCell({ prop, value, preview, onChange }: CellProps) {
 }
 
 function NumberCell({ prop, value, preview, onChange }: CellProps) {
+  const [localVal, setLocalVal] = useState(value);
+
+  useEffect(() => {
+    setLocalVal(value);
+  }, [value]);
+
   if (preview) {
     return (
       <span className="text-xs text-neutral-700 dark:text-neutral-300 font-mono">
@@ -291,11 +297,22 @@ function NumberCell({ prop, value, preview, onChange }: CellProps) {
       </span>
     );
   }
+
   return (
     <input
       type="number"
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
+      value={localVal}
+      onChange={(e) => setLocalVal(e.target.value)}
+      onBlur={() => {
+        if (localVal !== value) {
+          onChange(localVal);
+        }
+      }}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") {
+          e.currentTarget.blur();
+        }
+      }}
       placeholder="0"
       className="bg-transparent focus:bg-white dark:focus:bg-neutral-800 border-none outline-hidden w-full px-1.5 py-1 text-xs font-mono text-neutral-700 dark:text-neutral-300 placeholder:text-neutral-300 dark:placeholder:text-neutral-600 rounded-md transition"
     />

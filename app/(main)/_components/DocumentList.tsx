@@ -170,12 +170,21 @@ export const DocumentList = ({
   const [wikiPageIds, setWikiPageIds] = useState<string[]>([]);
 
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem("teamspaceIds");
-      if (stored) {
-        setLocalTeamspaceIds(JSON.parse(stored));
+    const loadTeamspaces = () => {
+      try {
+        const stored = localStorage.getItem("teamspaceIds");
+        setLocalTeamspaceIds(stored ? JSON.parse(stored) : []);
+      } catch {
+        setLocalTeamspaceIds([]);
       }
-    } catch {}
+    };
+    loadTeamspaces();
+    window.addEventListener("teamspace-status-changed", loadTeamspaces);
+    window.addEventListener("storage", loadTeamspaces);
+    return () => {
+      window.removeEventListener("teamspace-status-changed", loadTeamspaces);
+      window.removeEventListener("storage", loadTeamspaces);
+    };
   }, []);
 
   useEffect(() => {

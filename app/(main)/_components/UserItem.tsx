@@ -13,11 +13,13 @@ import { cn } from "@/lib/utils";
 import { useUser } from "@/components/providers/supabase-provider";
 import { SignOutButton } from "@/components/auth-components";
 import { ChevronsLeftRight, LogOut, Settings } from "lucide-react";
+import { useSettings } from "@/hooks/useSettingsModal";
 import { useAccount } from "@/hooks/useAccountModal";
 
 export const UserItem = ({ navDrawer }: { navDrawer?: boolean }) => {
   const { user } = useUser();
   const accountModal = useAccount();
+  const settingsModal = useSettings();
   const { setInnerPopoverOpen } = useNavDrawer();
 
   const onOpenChange = (open: boolean) => {
@@ -82,11 +84,11 @@ export const UserItem = ({ navDrawer }: { navDrawer?: boolean }) => {
           <button
             onClick={() => {
               setInnerPopoverOpen(false);
-              accountModal.onOpen();
+              settingsModal.onOpen();
             }}
           >
             <Settings className="text-muted-foreground size-4" />
-            Manage Account
+            Manage Account & Settings
           </button>
         </DropdownMenuItem>
 

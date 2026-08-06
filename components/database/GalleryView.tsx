@@ -231,17 +231,19 @@ export const GalleryView = ({
         {!preview && onAddRow && (
           <button
             onClick={onAddRow}
-            className="group/new-card flex flex-col items-center justify-center min-h-[200px] h-full p-6 rounded-xl border-2 border-dashed border-neutral-200 dark:border-neutral-800 hover:border-neutral-400 dark:hover:border-neutral-700 bg-neutral-25/30 hover:bg-neutral-50/50 dark:bg-neutral-900/10 dark:hover:bg-neutral-900/30 transition text-center cursor-pointer"
+            className="group/new-card col-span-full flex items-center justify-center gap-x-3 min-h-[64px] py-3 px-6 rounded-xl border-2 border-dashed border-neutral-200 dark:border-neutral-800 hover:border-neutral-400 dark:hover:border-neutral-700 bg-neutral-100/40 hover:bg-neutral-200/50 dark:bg-neutral-900/30 dark:hover:bg-neutral-850 transition text-center cursor-pointer w-full"
           >
-            <div className="h-10 w-10 rounded-full bg-neutral-100 dark:bg-neutral-800/80 flex items-center justify-center text-neutral-400 group-hover/new-card:text-blue-500 group-hover/new-card:bg-blue-50 dark:group-hover/new-card:bg-blue-950/30 transition mb-3">
-              <Plus className="h-5 w-5" />
+            <div className="h-8 w-8 rounded-full bg-neutral-200/80 dark:bg-neutral-800 flex items-center justify-center text-neutral-500 group-hover/new-card:text-blue-500 group-hover/new-card:bg-blue-50 dark:group-hover/new-card:bg-blue-950/40 transition shrink-0">
+              <Plus className="h-4 w-4" />
             </div>
-            <span className="text-xs font-semibold text-neutral-500 dark:text-neutral-400 group-hover/new-card:text-neutral-800 dark:group-hover/new-card:text-white transition">
-              Add new card
-            </span>
-            <span className="text-[10px] text-neutral-400 dark:text-neutral-500 mt-1 max-w-[150px]">
-              Create a new database page item
-            </span>
+            <div className="flex items-center gap-x-2 text-left">
+              <span className="text-xs font-semibold text-neutral-700 dark:text-neutral-300 group-hover/new-card:text-neutral-900 dark:group-hover/new-card:text-white transition">
+                Add new card
+              </span>
+              <span className="text-[10px] text-neutral-400 dark:text-neutral-500 hidden sm:inline">
+                — Create a new database page item
+              </span>
+            </div>
           </button>
         )}
       </div>

@@ -660,7 +660,7 @@ export const DatabaseView = ({
       )}
 
       {/* ── Active view ── */}
-      <div className="pt-2">
+      <div className="pt-2 w-full overflow-x-auto">
         {activeTab === "table" && (
           <TableView
             documentId={documentId}

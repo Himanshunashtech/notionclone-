@@ -414,6 +414,8 @@ const rawDbQueries = {
   },
 
   getEvents: async (userId: string) => {
+    if (!userId) return [];
+
     const { data, error } = await supabase
       .from("calendar_events")
       .select("*")
@@ -421,7 +423,76 @@ const rawDbQueries = {
       .order("start_time", { ascending: true });
 
     if (error) throw error;
-    return (data || []).map(mapCalendarEvent);
+    const mappedEvents = (data || []).map(mapCalendarEvent);
+
+    const existingDocIds = new Set(mappedEvents.map((ev) => ev.documentId).filter(Boolean));
+
+    const { data: docs } = await supabase
+      .from("documents")
+      .select("*")
+      .eq("user_id", userId)
+      .eq("is_archived", false);
+
+    if (docs && docs.length > 0) {
+      const meetingDbIds = new Set(
+        docs.filter((d) => (d.title || "").trim().toLowerCase() === "meetings").map((d) => d.id)
+      );
+
+      for (const doc of docs) {
+        if (existingDocIds.has(doc.id)) continue;
+
+        const isChildOfMeetings = doc.parent_document && meetingDbIds.has(doc.parent_document);
+        const lowerTitle = (doc.title || "").toLowerCase();
+        const isMeetingTitle =
+          lowerTitle.includes("meeting") ||
+          lowerTitle.includes("sync") ||
+          lowerTitle.includes("1:1") ||
+          lowerTitle.includes("standup") ||
+          lowerTitle.includes("retro") ||
+          lowerTitle.includes("call");
+
+        if (isChildOfMeetings || isMeetingTitle) {
+          let explicitDate: Date | null = null;
+
+          if (doc.content) {
+            try {
+              const parsed = JSON.parse(doc.content);
+              if (parsed.type === "database_row" && parsed.values) {
+                const rawDate = parsed.values.date || parsed.values.due_date || parsed.values.target_date || parsed.values.start_time;
+                if (rawDate) {
+                  const d = new Date(rawDate);
+                  if (!isNaN(d.getTime())) explicitDate = d;
+                }
+              }
+            } catch {}
+          }
+
+          // Require an explicit date property; do not auto-create meetings for today based on creation time
+          if (!explicitDate) continue;
+
+          const startMs = explicitDate.getTime();
+          const endMs = startMs + 60 * 60 * 1000;
+
+          mappedEvents.push({
+            _id: `doc_event_${doc.id}`,
+            _creationTime: doc.created_at ? new Date(doc.created_at).getTime() : Date.now(),
+            id: `doc_event_${doc.id}`,
+            title: doc.title || "Meeting",
+            description: "Meeting Note",
+            userId: doc.user_id,
+            startTime: startMs,
+            endTime: endMs,
+            isAllDay: false,
+            color: "#10b981",
+            meetingLink: `/documents/${doc.id}`,
+            documentId: doc.id,
+          });
+        }
+      }
+    }
+
+    mappedEvents.sort((a, b) => a.startTime - b.startTime);
+    return mappedEvents;
   },
 
   searchDocuments: async (userId: string, args: { query: string }) => {

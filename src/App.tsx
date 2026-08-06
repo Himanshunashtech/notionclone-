@@ -12,6 +12,7 @@ import DocumentIdPage from "@/app/(main)/(routes)/documents/[documentId]/page";
 import PreviewPage from "@/app/(public)/(routes)/preview/[documentId]/page";
 import LibraryPage from "@/app/(main)/(routes)/library/page";
 import CalendarPage from "@/app/(main)/(routes)/calendar/page";
+import MarketplacePage from "@/app/(main)/(routes)/marketplace/page";
 import OverviewPage from "@/app/(landing)/(routes)/overview/page";
 import PricingPage from "@/app/(landing)/(routes)/pricing/page";
 import IntegrationsPage from "@/app/(landing)/(routes)/integrations/page";
@@ -209,6 +210,14 @@ export default function App() {
               element={
                 <MainLayout>
                   <CalendarPage />
+                </MainLayout>
+              }
+            />
+            <Route
+              path="/marketplace"
+              element={
+                <MainLayout>
+                  <MarketplacePage />
                 </MainLayout>
               }
             />
